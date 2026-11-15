@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plotter CNC HMI - Control A4</title>
+<style>
+  :root { --bg: #0f172a; --panel: #1e293b; --accent: #06b6d4; --text: #f8fafc; --muted: #94a3b8; --danger: #ef4444; --ok: #22c55e; --warn: #f59e0b; }
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+  aside { width: 415px; background: var(--panel); padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; border-right: 1px solid #334155; }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; position: relative; }
+  h2 { margin: 0 0 8px 0; font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; }
+  .card { background: #0f172a; padding: 11px; border-radius: 8px; border: 1px solid #334155; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  input[type="text"], input[type="number"], select { background: #1e293b; border: 1px solid #475569; color: white; padding: 6px 8px; border-radius: 4px; width: 100%; }
+  button { background: #334155; color: white; border: none; padding: 8px 10px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.15s; font-size: 12px; }
+  button:hover { background: #475569; }
+  button.primary { background: var(--accent); color: #0f172a; }
+  button.primary:hover { background: #22d3ee; }
+  button.ok { background: var(--ok); color: #0f172a; }
+  button.ok:hover { background: #4ade80; }
+  button.warn { background: var(--warn); color: #0f172a; }
+  button.warn:hover { background: #fbbf24; }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: #f87171; }
+  .tabs { display: flex; gap: 6px; }
+  .tab { flex: 1; text-align: center; padding: 8px; background: #0f172a; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid #334155; }
+  .tab.active { background: var(--accent); color: #0f172a; font-weight: bold; border-color: var(--accent); }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+  #canvasWrap { background: #020617; padding: 12px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 2px solid #06b6d4; }
+  canvas { background: #ffffff; cursor: default; display: block; }
+  .status-bar { position: absolute; top: 12px; right: 20px; background: var(--panel); padding: 8px 14px; border-radius: 20px; font-size: 13px; border: 1px solid #334155; display: flex; gap: 14px; align-items: center; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--danger); margin-right: 6px; transition: 0.2s; flex-shrink: 0; }
+  .dot.online { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+  .origin-badge { display: flex; flex-direction: column; gap: 6px; background: #1e293b; padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; font-size: 12px; margin-bottom: 8px; }
+  .axis-pills { display: flex; gap: 6px; }
+  .pill { flex: 1; text-align: center; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #0f172a; border: 1px solid #334155; }
+  .pill.zero { color: var(--ok); border-color: rgba(34, 197, 94, 0.4); }
+  .pill.moved { color: var(--warn); border-color: rgba(245, 158, 11, 0.4); }
+  .jog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; align-items: center; }
+  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 11px; height: 85px; overflow-y: auto; padding: 6px; border-radius: 4px; border: 1px solid #334155; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<aside>
+  <!-- 1. CONEXIÓN -->
+  <div class="card">
+    <h2>1. Estado ESP32 (FluidNC)</h2>
+    <div class="row">
+      <input type="text" id="ipInput" value="192.168.1.61" placeholder="IP del ESP32">
+      <button class="primary" onclick="connectESP()" style="width:auto; white-space:nowrap;">Reconectar</button>
+    </div>
+    <div style="font-size:12px; color:var(--muted);" id="connMsg">Iniciando enlace...</div>
+  </div>
+
+  <!-- PESTAÑAS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('design', this)">Diseño e Impresión</div>
+    <div class="tab" onclick="switchTab('calib', this)">Control y Calibración</div>
+  </div>
+
+  <!-- PANEL DISEÑO -->
+  <div id="tab-design" style="display:flex; flex-direction:column; gap:10px;">
+    <div class="card">
+      <h2>2. Cargar Imagen, Texto o Prueba</h2>
+      <label>Subir imagen (.png, .jpg, .svg):</label>
+      <input type="file" id="imgInput" accept="image/*" style="margin-bottom:8px; font-size:12px;">
+      <label>Umbral de detección de bordes: <b id="threshVal" style="color:white;">128</b></label>
+      <input type="range" id="threshSlider" min="30" max="230" value="128" oninput="onThreshChange(this.value)" style="width:100%; margin-bottom:8px;">
+      <label>Escribir texto vectorizado:</label>
+      <div class="row">
+        <input type="text" id="textInput" placeholder="Ej: CNC PLOTTER 2026">
+        <button onclick="generateTextVectors()" style="width:auto;">Crear</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button onclick="loadTestSquare()" style="width:100%;">📐 Cargar Cuadro de Prueba (50×50 mm)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Posición y Escala en Hoja A4</h2>
+      <div class="grid-4">
+        <div><label>Posición X (mm)</label><input type="number" id="posX" value="30" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Posición Y (mm)</label><input type="number" id="posY" value="40" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Ancho (mm)</label><input type="number" id="sizeW" value="100" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Alto (mm)</label><input type="number" id="sizeH" value="100" step="1" oninput="syncFromInputs()"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Velocidad de Impresión: <b id="speedBadge" style="color:white;">250</b> mm/min</h2>
+      <div class="row">
+        <input type="range" id="speedSlider" min="50" max="500" value="250" oninput="setSpeed(this.value)">
+        <input type="number" id="speedNum" value="250" min="50" max="500" style="width:75px;" oninput="setSpeed(this.value)">
+      </div>
+      <div class="row" style="justify-content:space-between;">
+        <button onclick="stepSpeed(-10)">-10</button>
+        <button onclick="stepSpeed(-1)">-1</button>
+        <span style="font-size:11px; color:var(--muted);">Máx. 500 mm/min</span>
+        <button onclick="stepSpeed(1)">+1</button>
+        <button onclick="stepSpeed(10)">+10</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button class="ok" id="btnStart" style="flex:2; font-size:13px;" onclick="startPrint()">▶ IMPRIMIR</button>
+        <button class="warn" id="btnPause" style="flex:1.4; font-size:12px;" onclick="togglePause()">⏸ PAUSAR</button>
+        <button class="danger" style="flex:1.2; font-size:12px;" onclick="stopPrintClean()">⏹ PARAR</button>
+      </div>
+      <div style="font-size:12px; color:var(--muted); margin-top:6px;" id="printProgress">Listo. Carga una imagen, texto o cuadro de prueba.</div>
+    </div>
+  </div>
+
+  <!-- PANEL CALIBRACIÓN -->
+  <div id="tab-calib" style="display:none; flex-direction:column; gap:10px;">
+    <div class="card">
+      <h2>Control Manual y Origen 3D (Jogging)</h2>
+
+      <div class="origin-badge">
+        <div style="display:flex; align-items:center;">
+          <span class="dot online" id="originLed"></span>
+          <span id="originText">Origen 3D: <b style="color:var(--ok);">En el Origen (0, 0, 0)</b></span>
+        </div>
+        <div class="axis-pills">
+          <div class="pill zero" id="pillX">X: 0.0</div>
+          <div class="pill zero" id="pillY">Y: 0.0</div>
+          <div class="pill zero" id="pillZ">Z: 0.0</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <label style="margin:0; width:80px;">Paso (mm):</label>
+        <select id="jogStep" style="width:90px;">
+          <option value="1">1 mm</option>
+          <option value="5">5 mm</option>
+          <option value="10" selected>10 mm</option>
+          <option value="25">25 mm</option>
+        </select>
+        <button onclick="sendCmd('$X')" style="margin-left:auto; width:auto;">Desbloquear ($X)</button>
+      </div>
+
+      <div class="jog-grid">
+        <div></div>
+        <button onclick="jog('Y', 1)">Y +</button>
+        <button onclick="jog('Z', 1)">Z + (Subir)</button>
+
+        <button onclick="jog('X', -1)">X -</button>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <button class="primary" onclick="setOrigin()" style="padding:5px;" title="Fija la posición actual (X,Y,Z) como (0,0,0)">Fijar 0,0,0</button>
+          <button onclick="goHome()" style="padding:5px;" title="Sube Z primero, regresa X e Y al origen, y baja Z a 0">Ir a 0,0,0</button>
+        </div>
+        <button onclick="jog('X', 1)">X +</button>
+
+        <div></div>
+        <button onclick="jog('Y', -1)">Y -</button>
+        <button onclick="jog('Z', -1)">Z - (Bajar)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Calibración Pasos / mm</h2>
+      <label>1. Ordenar avance de prueba de 10 mm:</label>
+      <div class="row">
+        <button onclick="jog('X', 1, 10)">Mover X 10mm</button>
+        <button onclick="jog('Y', 1, 10)">Mover Y 10mm</button>
+      </div>
+      <label>2. Ingresa cuánto midió realmente con regla (mm):</label>
+      <div class="row">
+        <select id="calAxis" style="width:85px;">
+          <option value="x">Eje X</option>
+          <option value="y">Eje Y</option>
+          <option value="z">Eje Z</option>
+        </select>
+        <input type="number" id="measuredMm" value="10" step="0.1">
+        <button class="primary" onclick="applyCalibration()" style="width:auto;">Calcular</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button class="ok" style="width:100%;" onclick="saveConfigFlash()">💾 Guardar Calibración Permanente</button>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;" id="calInfo">Pasos actuales: 100.000 pasos/mm</div>
+    </div>
+  </div>
+
+  <!-- CONSOLA DIRECTA -->
+  <div class="card">
+    <h2>Consola FluidNC</h2>
+    <div class="console-box" id="consoleLog"></div>
+    <div class="row">
+      <input type="text" id="manualCmd" placeholder="Enviar comando (ej: $X, G0 X10)..." onkeydown="if(event.key==='Enter') sendManual()">
+      <button onclick="sendManual()" style="width:auto;">Enviar</button>
+    </div>
+  </div>
+</aside>
+
+<main>
+  <div class="status-bar">
+    <span><span class="dot" id="statusDot"></span><b id="machineState">Conectando...</b></span>
+    <span>X: <b id="liveX">0.0</b> mm</span>
+    <span>Y: <b id="liveY">0.0</b> mm</span>
+    <span>Z: <b id="liveZ">0.0</b> mm</span>
+  </div>
+
+  <div id="canvasWrap">
+    <canvas id="a4Canvas" width="420" height="594"></canvas>
+  </div>
+  <div style="margin-top:8px; font-size:12px; color:var(--muted);">
+    Vista Superior A4 (210 × 297 mm) • Arrastra el centro para mover o la esquina cian inferior derecha para escalar
+  </div>
+</main>
+
+<script>
+const SCALE = 2;
+const canvas = document.getElementById('a4Canvas');
+const ctx = canvas.getContext('2d');
+
+if (window.location.hostname) document.getElementById('ipInput').value = window.location.hostname;
+
+let statusTimer = null;
+let currentState = "Offline";
+let loadedImg = null;
+let paths = [];
+let box = { x: 30, y: 40, w: 100, h: 100 };
+let livePos = { x: 0, y: 0, z: 0 };
+let wcoOffset = { x: 0, y: 0, z: 0 };
+let ignorePollUntil = 0;
+let tracedPaths = [];
+let currentTrace = null;
+let dragMode = null;
+let dragOffset = { x: 0, y: 0 };
+let currentStepsPerMm = { x: 100, y: 100, z: 100 };
+let isPrinting = false;
+let isPaused = false;
+let isBusyMotion = false;
+
+function logConsole(txt) {
+  const boxEl = document.getElementById('consoleLog');
+  boxEl.innerHTML += String(txt).replace(/</g, "&lt;") + "<br>";
+  boxEl.scrollTop = boxEl.scrollHeight;
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-design').style.display = tab === 'design' ? 'flex' : 'none';
+  document.getElementById('tab-calib').style.display = tab === 'calib' ? 'flex' : 'none';
+}
+
+function updateOriginLed() {
+  const led = document.getElementById('originLed');
+  const txt = document.getElementById('originText');
+  const pX = document.getElementById('pillX');
+  const pY = document.getElementById('pillY');
+  const pZ = document.getElementById('pillZ');
+
+  const xZero = Math.abs(livePos.x) <= 0.15;
+  const yZero = Math.abs(livePos.y) <= 0.15;
+  const zZero = Math.abs(livePos.z) <= 0.15;
+
+  pX.className = xZero ? 'pill zero' : 'pill moved';
+  pY.className = yZero ? 'pill zero' : 'pill moved';
+  pZ.className = zZero ? 'pill zero' : 'pill moved';
+
+  pX.innerText = `X: ${livePos.x.toFixed(1)}`;
+  pY.innerText = `Y: ${livePos.y.toFixed(1)}`;
+  pZ.innerText = `Z: ${livePos.z.toFixed(1)}`;
+
+  if (xZero && yZero && zZero) {
+    led.className = 'dot online';
+    txt.innerHTML = 'Origen 3D: <b style="color:var(--ok);">En el Origen (0, 0, 0)</b>';
+  } else {
+    led.className = 'dot warn';
+    txt.innerHTML = 'Origen 3D: <b style="color:var(--warn);">Desplazado del Cero</b>';
+  }
+}
+
+function parseFluidLine(line) {
+  line = line.trim();
+  if (!line) return;
+
+  const wcoMatch = line.match(/WCO:([^,]+),([^,]+),([^|>]+)/);
+  if (wcoMatch) {
+    wcoOffset.x = parseFloat(wcoMatch[1]);
+    wcoOffset.y = parseFloat(wcoMatch[2]);
+    wcoOffset.z = parseFloat(wcoMatch[3]);
+  }
+
+  const wposMatch = line.match(/<([^|]+)\|WPos:([^,]+),([^,]+),([^|>]+)/);
+  const mposMatch = line.match(/<([^|]+)\|MPos:([^,]+),([^,]+),([^|>]+)/);
+
+  if (wposMatch || mposMatch) {
+    const m = wposMatch || mposMatch;
+    currentState = m[1];
+    document.getElementById('machineState').innerText = currentState;
+
+    if (Date.now() < ignorePollUntil) return;
+
+    if (wposMatch) {
+      livePos.x = parseFloat(m[2]);
+      livePos.y = parseFloat(m[3]);
+      livePos.z = parseFloat(m[4]);
+    } else {
+      livePos.x = parseFloat(m[2]) - wcoOffset.x;
+      livePos.y = parseFloat(m[3]) - wcoOffset.y;
+      livePos.z = parseFloat(m[4]) - wcoOffset.z;
+    }
+
+    document.getElementById('liveX').innerText = livePos.x.toFixed(1);
+    document.getElementById('liveY').innerText = livePos.y.toFixed(1);
+    document.getElementById('liveZ').innerText = livePos.z.toFixed(1);
+    updateOriginLed();
+
+    if (isPrinting && !isPaused && livePos.z <= 0.2) {
+      if (!currentTrace) {
+        currentTrace = [];
+        tracedPaths.push(currentTrace);
+      }
+      currentTrace.push({ x: livePos.x, y: livePos.y });
+    } else {
+      currentTrace = null;
+    }
+    drawCanvas();
+  } else if (line !== 'ok') {
+    logConsole(line);
+  }
+}
+
+async function pollStatus() {
+  try {
+    const r = await fetch(`/command?plain=${encodeURIComponent('?')}`);
+    if (r.ok) {
+      const txt = await r.text();
+      txt.split(/\r?\n/).forEach(parseFluidLine);
+    }
+  } catch (e) {}
+}
+
+async function sendCmd(cmd) {
+  try {
+    const r = await fetch(`/command?plain=${encodeURIComponent(cmd)}`);
+    const txt = await r.text();
+    txt.split(/\r?\n/).forEach(parseFluidLine);
+    return txt.trim();
+  } catch (e) {
+    logConsole("[Error] " + cmd);
+    return "error";
+  }
+}
+
+async function waitUntilIdle() {
+  await new Promise(r => setTimeout(r, 140));
+  for (let tries = 0; tries < 400; tries++) {
+    if (!isPrinting && !isBusyMotion) return;
+    while (isPaused && isPrinting) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+    if (!isPrinting && !isBusyMotion) return;
+    await pollStatus();
+    if (currentState === 'Idle') return;
+    await new Promise(r => setTimeout(r, 140));
+  }
+}
+
+function sendManual() {
+  const inp = document.getElementById('manualCmd');
+  const val = inp.value.trim();
+  if (!val) return;
+  logConsole("> " + val);
+  sendCmd(val);
+  inp.value = "";
+}
+
+async function connectESP() {
+  if (statusTimer) clearInterval(statusTimer);
+  const ip = document.getElementById('ipInput').value.trim();
+  document.getElementById('connMsg').innerText = "Enlazando con ESP32...";
+  const res = await sendCmd('$X');
+  if (res !== "error") {
+    await sendCmd('$HTTP/BlockDuringMotion=OFF');
+    await pollStatus();
+    document.getElementById('connMsg').innerText = `Conectado en línea (${ip})`;
+    document.getElementById('statusDot').classList.add('online');
+    logConsole("[HMI] ¡Enlazado y sincronizado!");
+    statusTimer = setInterval(() => { if (!isPrinting && !isBusyMotion) pollStatus(); }, 400);
+  } else {
+    document.getElementById('connMsg').innerText = "Sin respuesta del ESP32";
+    document.getElementById('machineState').innerText = "Offline";
+  }
+}
+
+// --- VECTORIZACIÓN Y DISEÑOS ---
+function onThreshChange(val) {
+  document.getElementById('threshVal').innerText = val;
+  processCurrentSource();
+}
+
+function loadTestSquare() {
+  loadedImg = null;
+  box = { x: 20, y: 20, w: 50, h: 50 };
+  updateInputsFromBox();
+  paths = [
+    [{x:0, y:0}, {x:1, y:0}, {x:1, y:1}, {x:0, y:1}, {x:0, y:0}],
+    [{x:0, y:0}, {x:1, y:1}],
+    [{x:1, y:0}, {x:0, y:1}]
+  ];
+  tracedPaths = [];
+  document.getElementById('printProgress').innerText = "Cuadro de prueba 50×50 mm listo.";
+  logConsole("[HMI] Cuadro de prueba cargado.");
+  drawCanvas();
+}
+
+document.getElementById('imgInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      loadedImg = img;
+      const aspect = img.height / img.width;
+      box.w = 100;
+      box.h = Math.max(10, Math.round(100 * aspect));
+      updateInputsFromBox();
+      processCurrentSource();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function processCurrentSource() {
+  if (!loadedImg) return;
+  const off = document.createElement('canvas');
+  const res = 130;
+  off.width = res;
+  off.height = Math.max(10, Math.round(res * (loadedImg.height / loadedImg.width)));
+  const octx = off.getContext('2d');
+  octx.fillStyle = "white"; octx.fillRect(0, 0, off.width, off.height);
+  octx.drawImage(loadedImg, 0, 0, off.width, off.height);
+  const data = octx.getImageData(0, 0, off.width, off.height).data;
+  const thresh = +document.getElementById('threshSlider').value;
+
+  paths = [];
+  for (let y = 0; y < off.height; y += 2) {
+    let seg = [];
+    for (let x = 0; x < off.width; x++) {
+      const idx = (y * off.width + x) * 4;
+      const lum = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+      if (lum < thresh) seg.push({ x: x / off.width, y: y / off.height });
+      else if (seg.length > 1) { paths.push([seg[0], seg[seg.length - 1]]); seg = []; }
+      else seg = [];
+    }
+    if (seg.length > 1) paths.push([seg[0], seg[seg.length - 1]]);
+  }
+  tracedPaths = [];
+  document.getElementById('printProgress').innerText = `Vectorizado: ${paths.length} trazos listos.`;
+  drawCanvas();
+}
+
+function generateTextVectors() {
+  const txt = document.getElementById('textInput').value.trim();
+  if (!txt) return alert("Escribe un texto primero.");
+  const off = document.createElement('canvas');
+  off.width = Math.max(300, txt.length * 32); off.height = 80;
+  const octx = off.getContext('2d');
+  octx.fillStyle = "white"; octx.fillRect(0, 0, off.width, off.height);
+  octx.fillStyle = "black"; octx.font = "bold 44px Arial";
+  octx.fillText(txt, 10, 56);
+  const img = new Image();
+  img.onload = () => {
+    loadedImg = img;
+    box.w = 140; box.h = Math.round(140 * (off.height / off.width));
+    updateInputsFromBox(); processCurrentSource();
+  };
+  img.src = off.toDataURL();
+}
+
+// --- LIENZO INTERACTIVO A4 ---
+function drawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
+  for (let x = 0; x <= 210; x += 10) { ctx.beginPath(); ctx.moveTo(x * SCALE, 0); ctx.lineTo(x * SCALE, canvas.height); ctx.stroke(); }
+  for (let y = 0; y <= 297; y += 10) { ctx.beginPath(); ctx.moveTo(0, y * SCALE); ctx.lineTo(canvas.width, y * SCALE); ctx.stroke(); }
+
+  ctx.strokeStyle = "#06b6d4"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.strokeRect(box.x * SCALE, box.y * SCALE, box.w * SCALE, box.h * SCALE);
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#06b6d4";
+  ctx.fillRect((box.x + box.w) * SCALE - 6, (box.y + box.h) * SCALE - 6, 12, 12);
+
+  ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1.4;
+  paths.forEach(p => {
+    ctx.beginPath();
+    p.forEach((pt, i) => {
+      const px = (box.x + pt.x * box.w) * SCALE;
+      const py = (box.y + pt.y * box.h) * SCALE;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  });
+
+  ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  tracedPaths.forEach(seg => {
+    if (seg.length < 2) return;
+    ctx.beginPath();
+    seg.forEach((pt, i) => {
+      if (i === 0) ctx.moveTo(pt.x * SCALE, pt.y * SCALE);
+      else ctx.lineTo(pt.x * SCALE, pt.y * SCALE);
+    });
+    ctx.stroke();
+  });
+
+  const cx = livePos.x * SCALE;
+  const cy = livePos.y * SCALE;
+  if (isPrinting) {
+    ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = livePos.z <= 0.2 ? "#ef4444" : "#06b6d4";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / SCALE;
+  const my = (e.clientY - rect.top) / SCALE;
+  if (Math.abs(mx - (box.x + box.w)) <= 6 && Math.abs(my - (box.y + box.h)) <= 6) { dragMode = 'resize'; return; }
+  if (mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
+    dragMode = 'move'; dragOffset = { x: mx - box.x, y: my - box.y };
+  }
+});
+window.addEventListener('mousemove', (e) => {
+  if (!dragMode) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / SCALE;
+  const my = (e.clientY - rect.top) / SCALE;
+  if (dragMode === 'move') {
+    box.x = Math.max(0, Math.min(210 - box.w, Math.round(mx - dragOffset.x)));
+    box.y = Math.max(0, Math.min(297 - box.h, Math.round(my - dragOffset.y)));
+  } else if (dragMode === 'resize') {
+    box.w = Math.max(10, Math.min(210 - box.x, Math.round(mx - box.x)));
+    box.h = Math.max(10, Math.min(297 - box.y, Math.round(my - box.y)));
+  }
+  updateInputsFromBox(); drawCanvas();
+});
+window.addEventListener('mouseup', () => { dragMode = null; });
+
+function updateInputsFromBox() {
+  document.getElementById('posX').value = box.x;
+  document.getElementById('posY').value = box.y;
+  document.getElementById('sizeW').value = box.w;
+  document.getElementById('sizeH').value = box.h;
+}
+function syncFromInputs() {
+  box.x = Math.max(0, Math.min(200, +document.getElementById('posX').value || 0));
+  box.y = Math.max(0, Math.min(287, +document.getElementById('posY').value || 0));
+  box.w = Math.max(10, Math.min(210 - box.x, +document.getElementById('sizeW').value || 10));
+  box.h = Math.max(10, Math.min(297 - box.y, +document.getElementById('sizeH').value || 10));
+  drawCanvas();
+}
+function setSpeed(val) {
+  val = Math.max(50, Math.min(500, parseInt(val) || 250));
+  document.getElementById('speedSlider').value = val;
+  document.getElementById('speedNum').value = val;
+  document.getElementById('speedBadge').innerText = val;
+}
+function stepSpeed(delta) { setSpeed((parseInt(document.getElementById('speedNum').value) || 250) + delta); }
+
+function jog(axis, dir, customDist) {
+  const dist = customDist || +document.getElementById('jogStep').value;
+  const feed = +document.getElementById('speedNum').value;
+  sendCmd(`$J=G91 ${axis}${dir * dist} F${feed}`);
+}
+
+async function setOrigin() {
+  ignorePollUntil = Date.now() + 700;
+  livePos = { x: 0, y: 0, z: 0 };
+  document.getElementById('liveX').innerText = '0.0';
+  document.getElementById('liveY').innerText = '0.0';
+  document.getElementById('liveZ').innerText = '0.0';
+  tracedPaths = [];
+  updateOriginLed();
+  drawCanvas();
+
+  await sendCmd('G92 X0 Y0 Z0');
+  logConsole("[HMI] Posición actual fijada como Origen 3D (0,0,0)");
+}
+
+// --- RETORNO SEGURO AL ORIGEN (PRIMERO SUBE Z, LUEGO MUEVE X/Y, LUEGO BAJA Z) ---
+async function goHome() {
+  if (isPrinting || isBusyMotion) return;
+  isBusyMotion = true;
+  const feed = +document.getElementById('speedNum').value;
+
+  logConsole("[HMI] Retorno seguro: 1) Subiendo Eje Z a altura libre (5 mm)...");
+  await sendCmd("G90");
+  await sendCmd(`G1 Z5 F${feed}`);
+  await waitUntilIdle();
+
+  if (isBusyMotion) {
+    logConsole("[HMI] Retorno seguro: 2) Desplazando X e Y al origen (0, 0)...");
+    await sendCmd(`G1 X0 Y0 F${feed}`);
+    await waitUntilIdle();
+  }
+
+  if (isBusyMotion) {
+    logConsole("[HMI] Retorno seguro: 3) Posicionando Eje Z en 0.0...");
+    await sendCmd(`G1 Z0 F${feed}`);
+    await waitUntilIdle();
+    logConsole("[HMI] Cabezal en el origen (0, 0, 0).");
+  }
+
+  isBusyMotion = false;
+}
+
+function applyCalibration() {
+  const ax = document.getElementById('calAxis').value;
+  const realMm = parseFloat(document.getElementById('measuredMm').value);
+  if (!realMm || realMm <= 0) return;
+  const newSteps = (currentStepsPerMm[ax] * 10) / realMm;
+  currentStepsPerMm[ax] = newSteps;
+  sendCmd(`$/axes/${ax}/steps_per_mm=${newSteps.toFixed(3)}`);
+  document.getElementById('calInfo').innerText = `Nuevo ${ax.toUpperCase()}: ${newSteps.toFixed(3)} pasos/mm aplicado.`;
+}
+
+function saveConfigFlash() {
+  sendCmd('$CD=config.yaml');
+  logConsole("[HMI] Guardado en config.yaml");
+}
+
+// --- IMPRESIÓN CON PAUSA/CONTINUAR Y PARADA LIMPIA ---
+async function startPrint() {
+  if (isPrinting || isBusyMotion) return;
+  if (paths.length === 0) return alert("Primero carga una imagen, texto o el cuadro de prueba.");
+  const feed = +document.getElementById('speedNum').value;
+  tracedPaths = [];
+  currentTrace = null;
+  isPrinting = true;
+  isPaused = false;
+  updatePauseBtn();
+
+  await sendCmd('$X');
+
+  let gcode = ["G21", "G90", `G1 Z5 F${feed}`];
+  paths.forEach(p => {
+    const x0 = (box.x + p[0].x * box.w).toFixed(2);
+    const y0 = (box.y + p[0].y * box.h).toFixed(2);
+    gcode.push(`G1 X${x0} Y${y0} F${feed}`);
+    gcode.push(`G1 Z0 F${feed}`);
+    for (let i = 1; i < p.length; i++) {
+      const xi = (box.x + p[i].x * box.w).toFixed(2);
+      const yi = (box.y + p[i].y * box.h).toFixed(2);
+      gcode.push(`G1 X${xi} Y${yi} F${feed}`);
+    }
+    gcode.push(`G1 Z5 F${feed}`);
+  });
+  gcode.push(`G1 X0 Y0 F${feed}`);
+
+  for (let i = 0; i < gcode.length; i++) {
+    while (isPaused && isPrinting) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+    if (!isPrinting) break;
+
+    const cmd = gcode[i];
+    document.getElementById('printProgress').innerText = `Paso ${i + 1}/${gcode.length}: ${cmd}`;
+    logConsole(`> ${cmd}`);
+    let resp = await sendCmd(cmd);
+    while (isPrinting && resp.includes("Try again")) {
+      await new Promise(r => setTimeout(r, 150));
+      resp = await sendCmd(cmd);
+    }
+    await waitUntilIdle();
+  }
+
+  if (isPrinting) {
+    document.getElementById('printProgress').innerText = "Impresión completada al 100 %.";
+    logConsole("[HMI] Trabajo terminado.");
+  }
+  isPrinting = false;
+  isPaused = false;
+  currentTrace = null;
+  updatePauseBtn();
+  drawCanvas();
+}
+
+function updatePauseBtn() {
+  const btn = document.getElementById('btnPause');
+  if (isPaused) {
+    btn.innerText = "▶ SEGUIR";
+    btn.className = "primary";
+  } else {
+    btn.innerText = "⏸ PAUSAR";
+    btn.className = "warn";
+  }
+}
+
+async function togglePause() {
+  if (!isPrinting) return;
+  if (!isPaused) {
+    isPaused = true;
+    updatePauseBtn();
+    await sendCmd('!'); // Feed Hold suave sin perder coordenadas ni disparar Alarm
+    document.getElementById('printProgress').innerText = "Impresión en pausa. Pulsa ▶ SEGUIR para continuar.";
+    logConsole("[HMI] Movimiento pausado (!).");
+    await pollStatus();
+  } else {
+    isPaused = false;
+    updatePauseBtn();
+    await sendCmd('~'); // Cycle Start: reanuda exactamente donde quedó
+    document.getElementById('printProgress').innerText = "Reanudando impresión...";
+    logConsole("[HMI] Reanudando movimiento (~).");
+  }
+}
+
+async function stopPrintClean() {
+  isPrinting = false;
+  isPaused = false;
+  isBusyMotion = false;
+  currentTrace = null;
+  updatePauseBtn();
+
+  // Pausa suave y limpia la cola sin disparar bloqueo permanente
+  await sendCmd('!');
+  await new Promise(r => setTimeout(r, 180));
+  await sendCmd('\x18'); // Reset suave de cola
+  await new Promise(r => setTimeout(r, 350));
+  await sendCmd('$X');   // Desbloquea cualquier estado Alarm automáticamente
+  await sendCmd('G90');
+  await sendCmd('G1 Z5 F300'); // Levanta el lápiz para dejarlo libre
+  await pollStatus();
+
+  document.getElementById('printProgress').innerText = "Impresión detenida. Sistema listo (Idle).";
+  logConsole("[HMI] Impresión detenida y sistema desbloqueado.");
+  drawCanvas();
+}
+
+drawCanvas();
+connectESP();
+</script>
+</body>
+</html>

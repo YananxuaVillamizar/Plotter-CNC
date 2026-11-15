@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plotter CNC HMI - Control A4</title>
+<style>
+  :root { --bg: #0f172a; --panel: #1e293b; --accent: #06b6d4; --text: #f8fafc; --muted: #94a3b8; --danger: #ef4444; --ok: #22c55e; }
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+  aside { width: 410px; background: var(--panel); padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; border-right: 1px solid #334155; }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; position: relative; }
+  h2 { margin: 0 0 8px 0; font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; }
+  .card { background: #0f172a; padding: 11px; border-radius: 8px; border: 1px solid #334155; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  input[type="text"], input[type="number"], select { background: #1e293b; border: 1px solid #475569; color: white; padding: 6px 8px; border-radius: 4px; width: 100%; }
+  button { background: #334155; color: white; border: none; padding: 8px 10px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.15s; font-size: 12px; }
+  button:hover { background: #475569; }
+  button.primary { background: var(--accent); color: #0f172a; }
+  button.primary:hover { background: #22d3ee; }
+  button.ok { background: var(--ok); color: #0f172a; }
+  button.ok:hover { background: #4ade80; }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: #f87171; }
+  .tabs { display: flex; gap: 6px; }
+  .tab { flex: 1; text-align: center; padding: 8px; background: #0f172a; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid #334155; }
+  .tab.active { background: var(--accent); color: #0f172a; font-weight: bold; border-color: var(--accent); }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+  #canvasWrap { background: #020617; padding: 12px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 2px solid #06b6d4; }
+  canvas { background: #ffffff; cursor: default; display: block; }
+  .status-bar { position: absolute; top: 12px; right: 20px; background: var(--panel); padding: 8px 14px; border-radius: 20px; font-size: 13px; border: 1px solid #334155; display: flex; gap: 14px; align-items: center; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--danger); margin-right: 5px; }
+  .dot.online { background: var(--ok); }
+  .jog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 11px; height: 85px; overflow-y: auto; padding: 6px; border-radius: 4px; border: 1px solid #334155; }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="card">
+    <h2>1. Conexión ESP32 (FluidNC)</h2>
+    <div class="row">
+      <input type="text" id="ipInput" value="192.168.1.61" placeholder="IP del ESP32">
+      <button class="primary" onclick="connectESP()" style="width:auto; white-space:nowrap;">Conectar</button>
+    </div>
+    <div style="font-size:12px; color:var(--muted);" id="connMsg">Listo para conectar</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('design', this)">Diseño e Impresión</div>
+    <div class="tab" onclick="switchTab('calib', this)">Control y Calibración</div>
+  </div>
+
+  <!-- PANEL DISEÑO -->
+  <div id="tab-design" style="display:flex; flex-direction:column; gap:10px;">
+    <div class="card">
+      <h2>2. Cargar Imagen, Texto o Prueba</h2>
+      <label>Subir imagen (.png, .jpg, .svg):</label>
+      <input type="file" id="imgInput" accept="image/*" style="margin-bottom:8px; font-size:12px;">
+      <label>Umbral de detección de bordes: <b id="threshVal" style="color:white;">128</b></label>
+      <input type="range" id="threshSlider" min="30" max="230" value="128" oninput="onThreshChange(this.value)" style="width:100%; margin-bottom:8px;">
+      <label>Escribir texto vectorizado:</label>
+      <div class="row">
+        <input type="text" id="textInput" placeholder="Ej: CNC PLOTTER 2026">
+        <button onclick="generateTextVectors()" style="width:auto;">Crear</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button onclick="loadTestSquare()" style="width:100%;">📐 Cargar Cuadro de Prueba (50×50 mm)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Posición y Escala en Hoja A4</h2>
+      <div class="grid-4">
+        <div><label>Posición X (mm)</label><input type="number" id="posX" value="30" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Posición Y (mm)</label><input type="number" id="posY" value="40" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Ancho (mm)</label><input type="number" id="sizeW" value="100" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Alto (mm)</label><input type="number" id="sizeH" value="100" step="1" oninput="syncFromInputs()"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Velocidad de Impresión: <b id="speedBadge" style="color:white;">250</b> mm/min</h2>
+      <div class="row">
+        <input type="range" id="speedSlider" min="50" max="600" value="250" oninput="setSpeed(this.value)">
+        <input type="number" id="speedNum" value="250" min="50" max="600" style="width:75px;" oninput="setSpeed(this.value)">
+      </div>
+      <div class="row" style="justify-content:space-between;">
+        <button onclick="stepSpeed(-10)">-10</button>
+        <button onclick="stepSpeed(-1)">-1</button>
+        <span style="font-size:11px; color:var(--muted);">Ajuste fino</span>
+        <button onclick="stepSpeed(1)">+1</button>
+        <button onclick="stepSpeed(10)">+10</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button class="ok" style="flex:2; font-size:14px;" onclick="startPrint()">▶ IMPRIMIR EN PLOTTER</button>
+        <button class="danger" style="flex:1;" onclick="emergencyStop()">🛑 PARAR</button>
+      </div>
+      <div style="font-size:12px; color:var(--muted); margin-top:6px;" id="printProgress">Listo. Carga una imagen, texto o cuadro de prueba.</div>
+    </div>
+  </div>
+
+  <!-- PANEL CALIBRACIÓN -->
+  <div id="tab-calib" style="display:none; flex-direction:column; gap:10px;">
+    <div class="card">
+      <h2>Control Manual (Jogging)</h2>
+      <div class="row">
+        <label style="margin:0; width:80px;">Paso (mm):</label>
+        <select id="jogStep" style="width:90px;">
+          <option value="1">1 mm</option>
+          <option value="5">5 mm</option>
+          <option value="10" selected>10 mm</option>
+          <option value="25">25 mm</option>
+        </select>
+        <button onclick="sendCmd('$X')" style="margin-left:auto; width:auto;">Desbloquear ($X)</button>
+      </div>
+      <div class="jog-grid">
+        <div></div><button onclick="jog('Y', 1)">Y +</button><button onclick="jog('Z', 1)">Z + (Subir)</button>
+        <button onclick="jog('X', -1)">X -</button><button class="primary" onclick="setOrigin()">Cero (0,0,0)</button><button onclick="jog('X', 1)">X +</button>
+        <div></div><button onclick="jog('Y', -1)">Y -</button><button onclick="jog('Z', -1)">Z - (Bajar)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Calibración Pasos / mm</h2>
+      <label>1. Ordenar avance de prueba de 10 mm:</label>
+      <div class="row">
+        <button onclick="jog('X', 1, 10)">Mover X 10mm</button>
+        <button onclick="jog('Y', 1, 10)">Mover Y 10mm</button>
+      </div>
+      <label>2. Ingresa cuánto midió realmente con regla (mm):</label>
+      <div class="row">
+        <select id="calAxis" style="width:85px;">
+          <option value="x">Eje X</option>
+          <option value="y">Eje Y</option>
+          <option value="z">Eje Z</option>
+        </select>
+        <input type="number" id="measuredMm" value="10" step="0.1">
+        <button class="primary" onclick="applyCalibration()" style="width:auto;">Calcular</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button class="ok" style="width:100%;" onclick="saveConfigFlash()">💾 Guardar Calibración Permanente</button>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;" id="calInfo">Pasos actuales: 100.000 pasos/mm</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Consola FluidNC</h2>
+    <div class="console-box" id="consoleLog"></div>
+  </div>
+</aside>
+
+<main>
+  <div class="status-bar">
+    <span><span class="dot" id="statusDot"></span><b id="machineState">Offline</b></span>
+    <span>X: <b id="liveX">0.0</b> mm</span>
+    <span>Y: <b id="liveY">0.0</b> mm</span>
+    <span>Z: <b id="liveZ">0.0</b> mm</span>
+  </div>
+
+  <div id="canvasWrap">
+    <canvas id="a4Canvas" width="420" height="594"></canvas>
+  </div>
+  <div style="margin-top:8px; font-size:12px; color:var(--muted);">
+    Vista Superior A4 (210 × 297 mm) • Arrastra el centro para mover o la esquina cian inferior derecha para escalar
+  </div>
+</main>
+
+<script>
+const SCALE = 2;
+const canvas = document.getElementById('a4Canvas');
+const ctx = canvas.getContext('2d');
+
+// Autodetectar IP si se abre desde el propio ESP32
+if (window.location.hostname && window.location.hostname !== 'localhost') {
+  document.getElementById('ipInput').value = window.location.hostname;
+}
+
+let ws = null;
+let useHttpFallback = false;
+let statusTimer = null;
+let loadedImg = null;
+let paths = [];
+let box = { x: 30, y: 40, w: 100, h: 100 };
+let livePos = { x: 0, y: 0, z: 0 };
+let drawnSegments = [];
+let dragMode = null;
+let dragOffset = { x: 0, y: 0 };
+let currentStepsPerMm = { x: 100, y: 100, z: 100 };
+let isPrinting = false;
+let okResolver = null;
+
+function logConsole(txt) {
+  const boxEl = document.getElementById('consoleLog');
+  boxEl.innerHTML += String(txt).replace(/</g, "&lt;") + "<br>";
+  boxEl.scrollTop = boxEl.scrollHeight;
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-design').style.display = tab === 'design' ? 'flex' : 'none';
+  document.getElementById('tab-calib').style.display = tab === 'calib' ? 'flex' : 'none';
+}
+
+function parseFluidLine(line) {
+  line = line.trim();
+  if (!line) return;
+  if (line === 'ok' || line.startsWith('error:')) {
+    if (okResolver) { const r = okResolver; okResolver = null; r(line); }
+    if (line.startsWith('error:')) logConsole(line);
+    return;
+  }
+  const match = line.match(/<([^|]+)\|MPos:([^,]+),([^,]+),([^|>]+)/);
+  if (match) {
+    document.getElementById('machineState').innerText = match[1];
+    livePos.x = parseFloat(match[2]);
+    livePos.y = parseFloat(match[3]);
+    livePos.z = parseFloat(match[4]);
+    document.getElementById('liveX').innerText = livePos.x.toFixed(1);
+    document.getElementById('liveY').innerText = livePos.y.toFixed(1);
+    document.getElementById('liveZ').innerText = livePos.z.toFixed(1);
+    if (isPrinting && livePos.z <= 0.1) drawnSegments.push({ x: livePos.x, y: livePos.y });
+    drawCanvas();
+  } else if (!line.startsWith('PING:')) {
+    logConsole(line);
+  }
+}
+
+// --- CONEXIÓN HÍBRIDA (WEBSOCKET + HTTP REST) ---
+async function connectESP() {
+  const ip = document.getElementById('ipInput').value.trim();
+  if (!ip) return;
+  if (ws) { try { ws.close(); } catch(e){} ws = null; }
+  if (statusTimer) clearInterval(statusTimer);
+  useHttpFallback = false;
+
+  document.getElementById('connMsg').innerText = "Conectando con " + ip + "...";
+  logConsole("[HMI] Conectando a " + ip + "...");
+
+  // 1. Intentar WebSocket WebUI-3 (/ws con subprotocolo webui-v3 y sin subprotocolo)
+  const wsConnected = await tryWebSocket(`ws://${ip}/ws`, ['webui-v3']) ||
+                      await tryWebSocket(`ws://${ip}/ws`, []) ||
+                      await tryWebSocket(`ws://${ip}:81/`, ['arduino']);
+
+  if (wsConnected) {
+    setOnlineUI(ip, "WebSocket");
+    sendCmd('$X');
+    statusTimer = setInterval(() => { if (ws && ws.readyState === 1) ws.send('?'); }, 300);
+    return;
+  }
+
+  // 2. Fallback directo por HTTP REST (/command?commandText=?)
+  logConsole("[HMI] Probando enlace HTTP REST en puerto 80...");
+  try {
+    const res = await fetch(`http://${ip}/command?commandText=${encodeURIComponent('?')}`);
+    if (res.ok) {
+      const txt = await res.text();
+      useHttpFallback = true;
+      setOnlineUI(ip, "HTTP Puerto 80");
+      txt.split(/\r?\n/).forEach(parseFluidLine);
+      await httpSend('$X');
+      statusTimer = setInterval(async () => {
+        try {
+          const r = await fetch(`http://${ip}/command?commandText=${encodeURIComponent('?')}`);
+          if (r.ok) (await r.text()).split(/\r?\n/).forEach(parseFluidLine);
+        } catch(e){}
+      }, 450);
+      return;
+    }
+  } catch (e) {
+    logConsole("[Error] El navegador bloqueó el acceso externo o la IP no responde.");
+  }
+
+  document.getElementById('connMsg').innerText = "Sin conexión. Abre http://" + ip + "/hmi.html";
+}
+
+function tryWebSocket(url, protos) {
+  return new Promise((resolve) => {
+    let done = false;
+    const sock = protos.length ? new WebSocket(url, protos) : new WebSocket(url);
+    sock.binaryType = "arraybuffer";
+    const t = setTimeout(() => { if (!done) { done = true; try{sock.close();}catch(e){} resolve(false); } }, 1800);
+
+    sock.onopen = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(t);
+      ws = sock;
+      ws.onmessage = (evt) => {
+        const msg = evt.data instanceof ArrayBuffer ? new TextDecoder().decode(evt.data) : String(evt.data);
+        msg.split(/\r?\n/).forEach(parseFluidLine);
+      };
+      ws.onclose = () => {
+        document.getElementById('statusDot').classList.remove('online');
+        document.getElementById('machineState').innerText = "Offline";
+      };
+      resolve(true);
+    };
+    sock.onerror = () => { if (!done) { done = true; clearTimeout(t); resolve(false); } };
+  });
+}
+
+function setOnlineUI(ip, mode) {
+  document.getElementById('connMsg').innerText = `Conectado (${mode}) en ${ip}`;
+  document.getElementById('statusDot').classList.add('online');
+  logConsole(`[HMI] ¡Enlazado vía ${mode}!`);
+}
+
+async function httpSend(cmd) {
+  const ip = document.getElementById('ipInput').value.trim();
+  const res = await fetch(`http://${ip}/command?commandText=${encodeURIComponent(cmd)}`);
+  const txt = await res.text();
+  txt.split(/\r?\n/).forEach(parseFluidLine);
+  return txt;
+}
+
+function sendCmd(cmd) {
+  if (ws && ws.readyState === 1) {
+    ws.send(cmd + '\n');
+  } else if (useHttpFallback) {
+    httpSend(cmd);
+  } else {
+    logConsole("[Offline] " + cmd);
+  }
+}
+
+function sendCmdAndWaitOk(cmd) {
+  return new Promise(async (resolve) => {
+    if (useHttpFallback) {
+      await httpSend(cmd);
+      resolve('ok');
+      return;
+    }
+    if (!ws || ws.readyState !== 1) {
+      setTimeout(() => resolve('ok'), 30);
+      return;
+    }
+    okResolver = resolve;
+    ws.send(cmd + '\n');
+    setTimeout(() => { if (okResolver === resolve) { okResolver = null; resolve('timeout'); } }, 5000);
+  });
+}
+
+// --- VECTORIZACIÓN Y DISEÑOS ---
+function onThreshChange(val) {
+  document.getElementById('threshVal').innerText = val;
+  processCurrentSource();
+}
+
+function loadTestSquare() {
+  loadedImg = null;
+  box = { x: 20, y: 20, w: 50, h: 50 };
+  updateInputsFromBox();
+  paths = [
+    [{x:0, y:0}, {x:1, y:0}, {x:1, y:1}, {x:0, y:1}, {x:0, y:0}],
+    [{x:0, y:0}, {x:1, y:1}],
+    [{x:1, y:0}, {x:0, y:1}]
+  ];
+  document.getElementById('printProgress').innerText = "Cuadro de prueba 50×50 mm listo.";
+  logConsole("[HMI] Cuadro de prueba cargado.");
+  drawCanvas();
+}
+
+document.getElementById('imgInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      loadedImg = img;
+      const aspect = img.height / img.width;
+      box.w = 100;
+      box.h = Math.max(10, Math.round(100 * aspect));
+      updateInputsFromBox();
+      processCurrentSource();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function processCurrentSource() {
+  if (!loadedImg) return;
+  const off = document.createElement('canvas');
+  const res = 130;
+  off.width = res;
+  off.height = Math.max(10, Math.round(res * (loadedImg.height / loadedImg.width)));
+  const octx = off.getContext('2d');
+  octx.fillStyle = "white"; octx.fillRect(0, 0, off.width, off.height);
+  octx.drawImage(loadedImg, 0, 0, off.width, off.height);
+  const data = octx.getImageData(0, 0, off.width, off.height).data;
+  const thresh = +document.getElementById('threshSlider').value;
+
+  paths = [];
+  for (let y = 0; y < off.height; y += 2) {
+    let seg = [];
+    for (let x = 0; x < off.width; x++) {
+      const idx = (y * off.width + x) * 4;
+      const lum = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+      if (lum < thresh) seg.push({ x: x / off.width, y: y / off.height });
+      else if (seg.length > 1) { paths.push([seg[0], seg[seg.length - 1]]); seg = []; }
+      else seg = [];
+    }
+    if (seg.length > 1) paths.push([seg[0], seg[seg.length - 1]]);
+  }
+  document.getElementById('printProgress').innerText = `Vectorizado: ${paths.length} trazos listos.`;
+  drawCanvas();
+}
+
+function generateTextVectors() {
+  const txt = document.getElementById('textInput').value.trim();
+  if (!txt) return alert("Escribe un texto primero.");
+  const off = document.createElement('canvas');
+  off.width = Math.max(300, txt.length * 32); off.height = 80;
+  const octx = off.getContext('2d');
+  octx.fillStyle = "white"; octx.fillRect(0, 0, off.width, off.height);
+  octx.fillStyle = "black"; octx.font = "bold 44px Arial";
+  octx.fillText(txt, 10, 56);
+  const img = new Image();
+  img.onload = () => {
+    loadedImg = img;
+    box.w = 140; box.h = Math.round(140 * (off.height / off.width));
+    updateInputsFromBox(); processCurrentSource();
+  };
+  img.src = off.toDataURL();
+}
+
+// --- LIENZO INTERACTIVO ---
+function drawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
+  for (let x = 0; x <= 210; x += 10) { ctx.beginPath(); ctx.moveTo(x * SCALE, 0); ctx.lineTo(x * SCALE, canvas.height); ctx.stroke(); }
+  for (let y = 0; y <= 297; y += 10) { ctx.beginPath(); ctx.moveTo(0, y * SCALE); ctx.lineTo(canvas.width, y * SCALE); ctx.stroke(); }
+
+  ctx.strokeStyle = "#06b6d4"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.strokeRect(box.x * SCALE, box.y * SCALE, box.w * SCALE, box.h * SCALE);
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#06b6d4";
+  ctx.fillRect((box.x + box.w) * SCALE - 6, (box.y + box.h) * SCALE - 6, 12, 12);
+
+  ctx.strokeStyle = "#334155"; ctx.lineWidth = 1.3;
+  paths.forEach(p => {
+    ctx.beginPath();
+    p.forEach((pt, i) => {
+      const px = (box.x + pt.x * box.w) * SCALE;
+      const py = (box.y + pt.y * box.h) * SCALE;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  });
+
+  if (drawnSegments.length > 1) {
+    ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    drawnSegments.forEach((pt, i) => {
+      if (i === 0) ctx.moveTo(pt.x * SCALE, pt.y * SCALE);
+      else ctx.lineTo(pt.x * SCALE, pt.y * SCALE);
+    });
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#06b6d4";
+  ctx.beginPath();
+  ctx.arc(livePos.x * SCALE, livePos.y * SCALE, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / SCALE;
+  const my = (e.clientY - rect.top) / SCALE;
+  if (Math.abs(mx - (box.x + box.w)) <= 6 && Math.abs(my - (box.y + box.h)) <= 6) { dragMode = 'resize'; return; }
+  if (mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
+    dragMode = 'move'; dragOffset = { x: mx - box.x, y: my - box.y };
+  }
+});
+window.addEventListener('mousemove', (e) => {
+  if (!dragMode) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / SCALE;
+  const my = (e.clientY - rect.top) / SCALE;
+  if (dragMode === 'move') {
+    box.x = Math.max(0, Math.min(210 - box.w, Math.round(mx - dragOffset.x)));
+    box.y = Math.max(0, Math.min(297 - box.h, Math.round(my - dragOffset.y)));
+  } else if (dragMode === 'resize') {
+    box.w = Math.max(10, Math.min(210 - box.x, Math.round(mx - box.x)));
+    box.h = Math.max(10, Math.min(297 - box.y, Math.round(my - box.y)));
+  }
+  updateInputsFromBox(); drawCanvas();
+});
+window.addEventListener('mouseup', () => { dragMode = null; });
+
+function updateInputsFromBox() {
+  document.getElementById('posX').value = box.x;
+  document.getElementById('posY').value = box.y;
+  document.getElementById('sizeW').value = box.w;
+  document.getElementById('sizeH').value = box.h;
+}
+function syncFromInputs() {
+  box.x = Math.max(0, Math.min(200, +document.getElementById('posX').value || 0));
+  box.y = Math.max(0, Math.min(287, +document.getElementById('posY').value || 0));
+  box.w = Math.max(10, Math.min(210 - box.x, +document.getElementById('sizeW').value || 10));
+  box.h = Math.max(10, Math.min(297 - box.y, +document.getElementById('sizeH').value || 10));
+  drawCanvas();
+}
+function setSpeed(val) {
+  val = Math.max(50, Math.min(600, parseInt(val) || 250));
+  document.getElementById('speedSlider').value = val;
+  document.getElementById('speedNum').value = val;
+  document.getElementById('speedBadge').innerText = val;
+}
+function stepSpeed(delta) { setSpeed((parseInt(document.getElementById('speedNum').value) || 250) + delta); }
+
+function jog(axis, dir, customDist) {
+  const dist = customDist || +document.getElementById('jogStep').value;
+  const feed = +document.getElementById('speedNum').value;
+  sendCmd(`$J=G91 ${axis}${dir * dist} F${feed}`);
+}
+function setOrigin() { sendCmd('G92 X0 Y0 Z0'); drawnSegments = []; logConsole("[HMI] Origen (0,0,0)"); }
+function applyCalibration() {
+  const ax = document.getElementById('calAxis').value;
+  const realMm = parseFloat(document.getElementById('measuredMm').value);
+  if (!realMm || realMm <= 0) return;
+  const newSteps = (currentStepsPerMm[ax] * 10) / realMm;
+  currentStepsPerMm[ax] = newSteps;
+  sendCmd(`$/axes/${ax}/steps_per_mm=${newSteps.toFixed(3)}`);
+  document.getElementById('calInfo').innerText = `Nuevo ${ax.toUpperCase()}: ${newSteps.toFixed(3)} pasos/mm aplicado.`;
+}
+function saveConfigFlash() { sendCmd('$CD=config.yaml'); logConsole("[HMI] Guardado en config.yaml"); }
+
+async function startPrint() {
+  if (paths.length === 0) return alert("Primero carga una imagen, texto o el cuadro de prueba.");
+  const feed = +document.getElementById('speedNum').value;
+  drawnSegments = []; isPrinting = true;
+  let gcode = ["G21", "G90", "G0 Z5"];
+  paths.forEach(p => {
+    const x0 = (box.x + p[0].x * box.w).toFixed(2);
+    const y0 = (box.y + p[0].y * box.h).toFixed(2);
+    gcode.push(`G0 X${x0} Y${y0}`);
+    gcode.push(`G1 Z0 F${feed}`);
+    for (let i = 1; i < p.length; i++) {
+      const xi = (box.x + p[i].x * box.w).toFixed(2);
+      const yi = (box.y + p[i].y * box.h).toFixed(2);
+      gcode.push(`G1 X${xi} Y${yi} F${feed}`);
+    }
+    gcode.push(`G0 Z5`);
+  });
+  gcode.push("G0 X0 Y0");
+
+  for (let i = 0; i < gcode.length; i++) {
+    if (!isPrinting) break;
+    document.getElementById('printProgress').innerText = `Enviando comando ${i + 1} de ${gcode.length}...`;
+    await sendCmdAndWaitOk(gcode[i]);
+  }
+  if (isPrinting) document.getElementById('printProgress').innerText = "Impresión completada.";
+  isPrinting = false;
+}
+
+function emergencyStop() {
+  isPrinting = false;
+  sendCmd('!');
+  setTimeout(() => sendCmd('\x18'), 120);
+  document.getElementById('printProgress').innerText = "Parada de emergencia activada.";
+}
+
+drawCanvas();
+// Autoconectar si ya se cargó desde el ESP32
+if (window.location.hostname === '192.168.1.61') connectESP();
+</script>
+</body>
+</html>
