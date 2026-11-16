@@ -46,15 +46,15 @@
   #canvasWrap { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; padding: 4px 0; }
   .canvas-frame { background: #020617; padding: 7px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); border: 2px solid #06b6d4; display: flex; align-items: center; justify-content: center; }
   canvas#a4Canvas { background: #ffffff; cursor: default; display: block; max-width: 100%; max-height: calc(100vh - 108px); width: auto; height: auto; }
+  canvas#a4Canvas.eraser-cursor { cursor: none; }
   .sketch-info-bar { width: 100%; background: var(--panel); border: 1px solid #334155; border-radius: 8px; padding: 5px 12px; font-size: 11px; display: flex; gap: 10px; align-items: center; color: var(--muted); justify-content: space-between; flex-wrap: wrap; }
   .sketch-info-bar b { color: var(--text); }
 
-  /* VISTA PREVIA Y BORRADOR INTERACTIVO */
-  .preview-box { background: #020617; border: 1px dashed #475569; border-radius: 6px; padding: 5px; display: flex; gap: 6px; align-items: center; justify-content: center; min-height: 92px; margin-bottom: 6px; }
+  /* VISTA PREVIA */
+  .preview-box { background: #020617; border: 1px dashed #475569; border-radius: 6px; padding: 5px; display: flex; gap: 6px; align-items: center; justify-content: center; min-height: 88px; margin-bottom: 6px; }
   .preview-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
   .preview-col span { font-size: 9.5px; color: var(--muted); }
-  .preview-col canvas { max-width: 100%; max-height: 85px; border-radius: 4px; border: 1px solid #334155; background: #ffffff; }
-  canvas#editPreviewCanvas.eraser-active { cursor: crosshair; border: 2px solid var(--warn); }
+  .preview-col canvas { max-width: 100%; max-height: 80px; border-radius: 4px; border: 1px solid #334155; background: #ffffff; }
 
   .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--danger); margin-right: 5px; transition: 0.2s; flex-shrink: 0; }
   .dot.online { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
@@ -65,7 +65,7 @@
   .pill.zero { color: var(--ok); border-color: rgba(34, 197, 94, 0.4); }
   .pill.moved { color: var(--warn); border-color: rgba(245, 158, 11, 0.4); }
   .jog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; align-items: center; }
-  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 10.5px; flex: 1; min-height: 80px; overflow-y: auto; padding: 5px; border-radius: 4px; border: 1px solid #334155; margin-bottom: 5px; }
+  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 10.5px; flex: 1; min-height: 75px; overflow-y: auto; padding: 5px; border-radius: 4px; border: 1px solid #334155; margin-bottom: 5px; }
 </style>
 </head>
 <body>
@@ -114,14 +114,14 @@
     </h2>
 
     <div class="preview-box">
-      <span style="font-size:10.5px; color:var(--muted); text-align:center;" id="previewEmptyMsg">Selecciona una capa para editar o borrar detalles</span>
+      <span style="font-size:10.5px; color:var(--muted); text-align:center;" id="previewEmptyMsg">Selecciona una capa para ver y editar</span>
       <div class="preview-col" id="colOrig" style="display:none;">
         <span>Original de Capa</span>
-        <canvas id="origPreviewCanvas" width="145" height="82"></canvas>
+        <canvas id="origPreviewCanvas" width="145" height="80"></canvas>
       </div>
       <div class="preview-col" id="colEdit" style="display:none;">
-        <span id="editPreviewTitle">Procesada / Trazos</span>
-        <canvas id="editPreviewCanvas" width="145" height="82"></canvas>
+        <span>Trazos Suavizados</span>
+        <canvas id="editPreviewCanvas" width="145" height="80"></canvas>
       </div>
     </div>
 
@@ -134,11 +134,13 @@
       <button id="btnInvert" onclick="toggleFilter('invert')">◐ Invertir</button>
     </div>
 
-    <!-- CONTROLES DEL BORRADOR (VISIBLES AL ACTIVAR BORRADOR) -->
+    <!-- CONTROLES DEL BORRADOR SOBRE EL SKETCH -->
     <div id="eraserControls" style="display:none; background:#1e293b; padding:5px 7px; border-radius:5px; margin-bottom:5px; border:1px solid var(--warn);">
+      <div style="font-size:10px; color:var(--warn); margin-bottom:3px;">Pasa el ratón directamente sobre la hoja A4 para borrar en la capa activa:</div>
       <div class="row" style="margin-bottom:0;">
-        <span style="font-size:10.5px; color:var(--warn); white-space:nowrap;">Tamaño Goma: <b id="eraserSizeVal">14</b>px</span>
-        <input type="range" id="eraserSize" min="4" max="45" value="14" oninput="document.getElementById('eraserSizeVal').innerText=this.value" style="flex:1;">
+        <span style="font-size:10.5px; color:white; white-space:nowrap;">Diámetro: <b id="eraserSizeVal">12</b> mm</span>
+        <input type="range" id="eraserSize" min="2" max="40" value="12" oninput="document.getElementById('eraserSizeVal').innerText=this.value; drawCanvas();" style="flex:1;">
+        <button class="primary" onclick="toggleEraser()" style="padding:2px 7px; font-size:10px;">Listo</button>
       </div>
     </div>
 
@@ -150,26 +152,38 @@
     </div>
 
     <div class="row">
-      <div style="flex:1.35;">
-        <label>Método Trazado (Capa):</label>
+      <div style="flex:1.25;">
+        <label>Método Trazado:</label>
         <select id="vecMode" onchange="updateActiveLayerParams()">
           <option value="contour">✒️ Solo Contornos</option>
           <option value="zigzag">⚡ Relleno (Zig-Zag)</option>
           <option value="both">🎨 Híbrido (Ambos)</option>
         </select>
       </div>
-      <div style="flex:0.85;">
-        <label>Densidad:</label>
-        <select id="scanStep" onchange="updateActiveLayerParams()">
-          <option value="2">Fino</option>
-          <option value="3" selected>Normal</option>
-          <option value="5">Rápido</option>
+      <div style="flex:1;">
+        <label>Suavizado Curvas:</label>
+        <select id="smoothLevel" onchange="updateActiveLayerParams()">
+          <option value="0">Sin suavizar</option>
+          <option value="1">Suave (1x)</option>
+          <option value="2" selected>Ultra Suave (2x)</option>
         </select>
       </div>
     </div>
 
-    <label>Umbral de detección: <b id="threshVal" style="color:white;">128</b></label>
-    <input type="range" id="threshSlider" min="20" max="240" value="128" oninput="onThreshChange(this.value)" style="width:100%;">
+    <div class="row">
+      <div style="flex:1;">
+        <label>Umbral: <b id="threshVal" style="color:white;">128</b></label>
+        <input type="range" id="threshSlider" min="20" max="240" value="128" oninput="onThreshChange(this.value)" style="width:100%;">
+      </div>
+      <div style="width:82px;">
+        <label>Resolución:</label>
+        <select id="scanStep" onchange="updateActiveLayerParams()">
+          <option value="2" selected>Alta</option>
+          <option value="3">Media</option>
+          <option value="5">Rápida</option>
+        </select>
+      </div>
+    </div>
   </div>
 
   <!-- 4. POSICIÓN Y TAMAÑO DE CAPA ACTIVA -->
@@ -190,6 +204,7 @@
     <div style="display:flex; align-items:center; gap:8px;">
       <span class="dot" id="statusDot"></span>
       <b id="machineState">Conectando...</b>
+      <span id="eraserModeBanner" style="display:none; background:var(--warn); color:#0f172a; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:11px;">🧹 MODO BORRADOR ACTIVO</span>
     </div>
     <div style="display:flex; gap:16px; font-size:12.5px;">
       <span>X: <b id="liveX" style="color:var(--accent);">0.0</b> mm</span>
@@ -213,16 +228,21 @@
   </div>
 </main>
 
-<!-- ==================== COLUMNA DERECHA: CONEXIÓN, EJECUCIÓN Y CALIBRACIÓN ==================== -->
+<!-- ==================== COLUMNA DERECHA: CONEXIÓN, FLASH, EJECUCIÓN Y CALIBRACIÓN ==================== -->
 <aside class="right-panel">
-  <!-- CONEXIÓN IP ESP32 -->
+  <!-- CONEXIÓN IP ESP32 Y DESCARGA DE ARCHIVOS FLASH -->
   <div class="card">
-    <h2>Conexión ESP32 (FluidNC)</h2>
+    <h2>Conexión ESP32 y Memoria Flash</h2>
     <div class="row">
       <input type="text" id="ipInput" value="192.168.1.61" placeholder="IP del ESP32">
       <button class="primary" onclick="connectESP()" style="width:auto; white-space:nowrap;">Conectar</button>
     </div>
-    <div style="font-size:10.5px; color:var(--muted);" id="connMsg">Enlazando...</div>
+    <div class="row" style="margin-top:4px;">
+      <button onclick="downloadFlashFile('config.yaml')" style="flex:1; font-size:10.5px;" title="Descargar respaldo de config.yaml">⬇ config.yaml</button>
+      <button onclick="downloadFlashFile('index.html')" style="flex:1; font-size:10.5px;" title="Descargar respaldo de index.html">⬇ index.html</button>
+      <button onclick="listFlashFiles()" style="width:auto; font-size:10.5px;" title="Ver todos los archivos en Flash">📂 Flash</button>
+    </div>
+    <div style="font-size:10px; color:var(--muted); margin-top:3px;" id="connMsg">Enlazando...</div>
   </div>
 
   <!-- VELOCIDAD CON MODOS PREDEFINIDOS Y EJECUCIÓN -->
@@ -308,7 +328,7 @@
   </div>
 
   <!-- CONSOLA DIRECTA -->
-  <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:110px;">
+  <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:105px;">
     <h2>Consola FluidNC</h2>
     <div class="console-box" id="consoleLog"></div>
     <div class="row">
@@ -350,6 +370,7 @@ let activeLayerId = null;
 let layerCounter = 1;
 let eraserActive = false;
 let isErasingMouse = false;
+let mouseSketchPos = { x: -100, y: -100, inside: false };
 
 function getActiveLayer() {
   return layers.find(l => l.id === activeLayerId) || null;
@@ -381,13 +402,14 @@ function createLayerFromCanvas(name, imgCanvas, initialW) {
     rotation: 0,
     invert: false,
     vecMode: 'contour',
-    scanStep: 3,
+    smoothLevel: 2,
+    scanStep: 2,
     thresh: 128,
     box: { x: 25 + offset, y: 20 + offset, w, h },
     paths: []
   };
 
-  layers.unshift(layer); // Poner arriba de la pila
+  layers.unshift(layer);
   selectLayer(id);
   processLayer(layer);
 }
@@ -398,6 +420,7 @@ function selectLayer(id) {
   renderLayersList();
 
   if (!l) {
+    if (eraserActive) toggleEraser(false);
     document.getElementById('previewEmptyMsg').style.display = 'block';
     document.getElementById('colOrig').style.display = 'none';
     document.getElementById('colEdit').style.display = 'none';
@@ -406,11 +429,11 @@ function selectLayer(id) {
     return;
   }
 
-  // Sincronizar controles UI con la capa seleccionada
   document.getElementById('rotSlider').value = l.rotation;
   document.getElementById('rotNum').value = l.rotation;
   document.getElementById('rotBadge').innerText = l.rotation + "°";
   document.getElementById('vecMode').value = l.vecMode;
+  document.getElementById('smoothLevel').value = l.smoothLevel;
   document.getElementById('scanStep').value = l.scanStep;
   document.getElementById('threshSlider').value = l.thresh;
   document.getElementById('threshVal').innerText = l.thresh;
@@ -489,6 +512,7 @@ function duplicateActiveLayer() {
 }
 
 function clearAllLayers() {
+  if (eraserActive) toggleEraser(false);
   layers = [];
   activeLayerId = null;
   tracedPaths = [];
@@ -500,46 +524,33 @@ function clearAllLayers() {
 }
 
 // =========================================================================
-// HERRAMIENTA BORRADOR INTERACTIVO EN VISTA PREVIA
+// HERRAMIENTA BORRADOR ERGONÓMICA DIRECTO SOBRE EL SKETCH A4
 // =========================================================================
 
-function toggleEraser() {
+function toggleEraser(forceState) {
   const l = getActiveLayer();
-  if (!l || !l.sourceCanvas) return alert("Selecciona primero una capa con imagen o texto.");
-  eraserActive = !eraserActive;
+  const nextState = typeof forceState === 'boolean' ? forceState : !eraserActive;
+  if (nextState && (!l || !l.sourceCanvas)) {
+    return alert("Selecciona primero una capa con imagen o texto para borrar.");
+  }
+  eraserActive = nextState;
   document.getElementById('btnEraser').classList.toggle('active-tool', eraserActive);
   document.getElementById('eraserControls').style.display = eraserActive ? 'block' : 'none';
-  const ec = document.getElementById('editPreviewCanvas');
-  ec.classList.toggle('eraser-active', eraserActive);
-  document.getElementById('editPreviewTitle').innerText = eraserActive ? "🧹 Pasa el ratón para borrar" : "Procesada / Trazos";
+  document.getElementById('eraserModeBanner').style.display = eraserActive ? 'inline-block' : 'none';
+  canvas.classList.toggle('eraser-cursor', eraserActive);
+  drawCanvas();
 }
 
-const editPreviewEl = document.getElementById('editPreviewCanvas');
-editPreviewEl.addEventListener('mousedown', (e) => {
-  if (!eraserActive) return;
-  isErasingMouse = true;
-  applyEraserAtEvent(e);
-});
-editPreviewEl.addEventListener('mousemove', (e) => {
-  if (!eraserActive || !isErasingMouse) return;
-  applyEraserAtEvent(e);
-});
-window.addEventListener('mouseup', () => {
-  if (isErasingMouse) {
-    isErasingMouse = false;
-    const l = getActiveLayer();
-    if (l) processLayer(l);
-  }
-});
-
-function applyEraserAtEvent(e) {
+function eraseOnSketchAt(mx, my) {
   const l = getActiveLayer();
   if (!l || !l.sourceCanvas) return;
-  const rect = editPreviewEl.getBoundingClientRect();
-  const nx = (e.clientX - rect.left) / rect.width;
-  const ny = (e.clientY - rect.top) / rect.height;
 
-  // Mapear coordenadas inversas de rotación hacia l.sourceCanvas
+  // Coordenadas normalizadas (0..1) dentro del cuadro delimitador de la capa activa
+  const nx = (mx - l.box.x) / l.box.w;
+  const ny = (my - l.box.y) / l.box.h;
+  if (nx < -0.1 || nx > 1.1 || ny < -0.1 || ny > 1.1) return;
+
+  // Mapear hacia atrás considerando la rotación libre de la capa
   const rad = -l.rotation * Math.PI / 180;
   const absCos = Math.abs(Math.cos(l.rotation * Math.PI / 180));
   const absSin = Math.abs(Math.sin(l.rotation * Math.PI / 180));
@@ -551,23 +562,29 @@ function applyEraserAtEvent(e) {
   const sx = rx * Math.cos(rad) - ry * Math.sin(rad) + l.sourceCanvas.width / 2;
   const sy = rx * Math.sin(rad) + ry * Math.cos(rad) + l.sourceCanvas.height / 2;
 
-  const brushPx = (+document.getElementById('eraserSize').value / 150) * l.sourceCanvas.width;
+  const diameterMm = +document.getElementById('eraserSize').value;
+  const radiusPx = ((diameterMm / 2) / l.box.w) * rotW;
+
   const sctx = l.sourceCanvas.getContext('2d');
   sctx.fillStyle = l.invert ? "#000000" : "#ffffff";
   sctx.beginPath();
-  sctx.arc(sx, sy, Math.max(2, brushPx / 2), 0, Math.PI * 2);
+  sctx.arc(sx, sy, Math.max(2, radiusPx), 0, Math.PI * 2);
   sctx.fill();
 
-  // Dibujar trazo blanco inmediato en el preview
-  const ectx = editPreviewEl.getContext('2d');
-  ectx.fillStyle = "#ffffff";
-  ectx.beginPath();
-  ectx.arc(nx * editPreviewEl.width, ny * editPreviewEl.height, +document.getElementById('eraserSize').value / 2, 0, Math.PI * 2);
-  ectx.fill();
+  // Eliminar también visualmente los segmentos que caen dentro del radio de la goma al instante
+  const rMm = diameterMm / 2;
+  l.paths = l.paths.filter(poly => {
+    return !poly.every(pt => {
+      const px = l.box.x + pt.x * l.box.w;
+      const py = l.box.y + pt.y * l.box.h;
+      return Math.hypot(px - mx, py - my) <= rMm;
+    });
+  });
+  drawCanvas();
 }
 
 // =========================================================================
-// EDICIÓN, RECORTE CORREGIDO Y ROTACIÓN DE CAPA ACTIVA
+// EDICIÓN, RECORTE, ROTACIÓN Y SUAVIZADO DE CURVAS (CHAIKIN)
 // =========================================================================
 
 function resetActiveLayer() {
@@ -640,10 +657,9 @@ function transformActiveLayer(action) {
     l.sourceCanvas = dst;
     processLayer(l);
   } else if (action === 'crop') {
-    // Recorte inteligente respecto al color de borde (funciona con fondos blancos, grises o invertidos)
     const sctx = l.sourceCanvas.getContext('2d');
     const data = sctx.getImageData(0, 0, srcW, srcH).data;
-    const bgLum = (data[0] + data[1] + data[2]) / 3; // Toma el color de la esquina superior izquierda como fondo
+    const bgLum = (data[0] + data[1] + data[2]) / 3;
     let minX = srcW, minY = srcH, maxX = 0, maxY = 0, found = false;
 
     for (let y = 0; y < srcH; y++) {
@@ -683,6 +699,7 @@ function updateActiveLayerParams() {
   const l = getActiveLayer();
   if (!l) return;
   l.vecMode = document.getElementById('vecMode').value;
+  l.smoothLevel = +document.getElementById('smoothLevel').value;
   l.scanStep = +document.getElementById('scanStep').value;
   processLayer(l);
 }
@@ -694,10 +711,6 @@ function onThreshChange(val) {
   l.thresh = +val;
   processLayer(l);
 }
-
-// =========================================================================
-// MOTOR DE VECTORIZACIÓN POR CAPA + VISTAS PREVIAS
-// =========================================================================
 
 function renderLayerPreviews(l) {
   const emptyMsg = document.getElementById('previewEmptyMsg');
@@ -717,11 +730,35 @@ function renderLayerPreviews(l) {
 
   const oc = document.getElementById('origPreviewCanvas');
   oc.width = 150;
-  oc.height = Math.max(38, Math.min(82, Math.round(150 * (l.pristineCanvas.height / l.pristineCanvas.width))));
+  oc.height = Math.max(38, Math.min(80, Math.round(150 * (l.pristineCanvas.height / l.pristineCanvas.width))));
   const octx = oc.getContext('2d');
   octx.fillStyle = "#ffffff";
   octx.fillRect(0, 0, oc.width, oc.height);
   octx.drawImage(l.pristineCanvas, 0, 0, oc.width, oc.height);
+}
+
+// Algoritmo de subdivisión Chaikin: elimina los dientes de sierra convirtiendo escalones en curvas suaves
+function chaikinSmooth(pts, iterations) {
+  if (iterations <= 0 || pts.length < 3) return pts;
+  const isClosed = Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 0.015;
+  let current = pts.slice();
+
+  for (let it = 0; it < iterations; it++) {
+    if (current.length < 3) break;
+    let next = [];
+    if (!isClosed) next.push(current[0]);
+    const limit = isClosed ? current.length : current.length - 1;
+    for (let i = 0; i < limit; i++) {
+      const p0 = current[i];
+      const p1 = current[(i + 1) % current.length];
+      next.push({ x: 0.75 * p0.x + 0.25 * p1.x, y: 0.75 * p0.y + 0.25 * p1.y });
+      next.push({ x: 0.25 * p0.x + 0.75 * p1.x, y: 0.25 * p0.y + 0.75 * p1.y });
+    }
+    if (!isClosed) next.push(current[current.length - 1]);
+    else next.push(next[0]);
+    current = next;
+  }
+  return current;
 }
 
 function processLayer(l) {
@@ -748,10 +785,11 @@ function processLayer(l) {
   rctx.rotate(rad);
   rctx.drawImage(l.sourceCanvas, -l.sourceCanvas.width / 2, -l.sourceCanvas.height / 2);
 
+  // Alta resolución de muestreo para evitar bordes dentados
   const off = document.createElement('canvas');
-  const res = l.scanStep === 2 ? 175 : (l.scanStep === 3 ? 135 : 95);
+  const res = l.scanStep === 2 ? 280 : (l.scanStep === 3 ? 210 : 140);
   off.width = res;
-  off.height = Math.max(12, Math.round(res * (rotH / rotW)));
+  off.height = Math.max(16, Math.round(res * (rotH / rotW)));
   const octx = off.getContext('2d');
   octx.fillStyle = "#ffffff";
   octx.fillRect(0, 0, off.width, off.height);
@@ -761,11 +799,29 @@ function processLayer(l) {
   const d = imgData.data;
   const W = off.width, H = off.height;
 
-  const bin = new Uint8Array(W * H);
+  // Filtro suavizador 3x3 sobre luminancia para redondear bordes pixelados antes del umbral
+  const gray = new Float32Array(W * H);
   for (let i = 0; i < W * H; i++) {
     let lum = (d[i*4] + d[i*4+1] + d[i*4+2]) / 3;
     if (l.invert) lum = 255 - lum;
-    bin[i] = lum < l.thresh ? 1 : 0;
+    gray[i] = lum;
+  }
+
+  const bin = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let sum = 0, cnt = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+            sum += gray[ny * W + nx];
+            cnt++;
+          }
+        }
+      }
+      bin[y * W + x] = (sum / cnt) < l.thresh ? 1 : 0;
+    }
   }
 
   let newPaths = [];
@@ -807,7 +863,12 @@ function processLayer(l) {
             }
             if (!moved) break;
           }
-          if (poly.length >= 2) rawContours.push(simplifyPolyline(poly, 0.005));
+          if (poly.length >= 3) {
+            // Simplificar escalones de 1px y luego suavizar con curvas Chaikin
+            const simplified = simplifyPolyline(poly, 0.006);
+            const smoothed = chaikinSmooth(simplified, l.smoothLevel);
+            rawContours.push(smoothed);
+          }
         }
       }
     }
@@ -815,7 +876,7 @@ function processLayer(l) {
   }
 
   if (l.vecMode === 'zigzag' || l.vecMode === 'both') {
-    const yInc = l.vecMode === 'both' ? 3 : 2;
+    const yInc = l.vecMode === 'both' ? 4 : 3;
     let leftToRight = true;
     for (let y = 0; y < H; y += yInc) {
       let rowSegs = [];
@@ -840,12 +901,11 @@ function processLayer(l) {
 
   l.paths = newPaths;
 
-  // Actualizar vista previa procesada si es la capa activa
   if (l.id === activeLayerId) {
     renderLayerPreviews(l);
     const ec = document.getElementById('editPreviewCanvas');
     ec.width = 150;
-    ec.height = Math.max(38, Math.min(82, Math.round(150 * (H / W))));
+    ec.height = Math.max(38, Math.min(80, Math.round(150 * (H / W))));
     const ectx = ec.getContext('2d');
     ectx.fillStyle = "#ffffff";
     ectx.fillRect(0, 0, ec.width, ec.height);
@@ -986,15 +1046,15 @@ function generateTextLayer() {
   const txt = document.getElementById('textInput').value.trim();
   if (!txt) return alert("Escribe un texto primero.");
   const off = document.createElement('canvas');
-  off.width = Math.max(320, txt.length * 42);
-  off.height = 100;
+  off.width = Math.max(480, txt.length * 64);
+  off.height = 140;
   const octx = off.getContext('2d');
   octx.fillStyle = "#ffffff";
   octx.fillRect(0, 0, off.width, off.height);
   octx.fillStyle = "#000000";
-  octx.font = "bold 62px Arial";
+  octx.font = "bold 88px Arial";
   octx.textBaseline = "middle";
-  octx.fillText(txt, 14, 52);
+  octx.fillText(txt, 18, 72);
 
   createLayerFromCanvas(`Texto: ${txt.slice(0, 12)}`, off, 140);
   document.getElementById('textInput').value = "";
@@ -1013,7 +1073,8 @@ function addTestSquareLayer() {
     rotation: 0,
     invert: false,
     vecMode: 'contour',
-    scanStep: 3,
+    smoothLevel: 0,
+    scanStep: 2,
     thresh: 128,
     box: { x: 20, y: 20, w: 50, h: 50 },
     paths: [
@@ -1027,7 +1088,7 @@ function addTestSquareLayer() {
 }
 
 // =========================================================================
-// LIENZO INTERACTIVO A4 HORIZONTAL (RENDERIZADO MULTICAPA)
+// LIENZO INTERACTIVO A4 HORIZONTAL (RENDERIZADO MULTICAPA + BORRADOR EN VIVO)
 // =========================================================================
 
 function updateSketchTelemetry() {
@@ -1046,14 +1107,21 @@ function drawCanvas() {
   for (let x = 0; x <= SHEET_W; x += 10) { ctx.beginPath(); ctx.moveTo(x * SCALE, 0); ctx.lineTo(x * SCALE, canvas.height); ctx.stroke(); }
   for (let y = 0; y <= SHEET_H; y += 10) { ctx.beginPath(); ctx.moveTo(0, y * SCALE); ctx.lineTo(canvas.width, y * SCALE); ctx.stroke(); }
 
-  // Dibujar todas las capas visibles (de fondo a frente)
+  // Dibujar todas las capas visibles (con baja opacidad en las inactivas si el borrador está encendido)
   [...layers].reverse().forEach(l => {
     if (!l.visible) return;
     const isSel = l.id === activeLayerId;
 
-    // Trazos de la capa
+    ctx.save();
+    if (eraserActive && !isSel) {
+      ctx.globalAlpha = 0.2;
+    }
+
     ctx.strokeStyle = isSel ? "#0f172a" : "#64748b";
     ctx.lineWidth = isSel ? 1.8 : 1.3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
     l.paths.forEach(p => {
       ctx.beginPath();
       p.forEach((pt, i) => {
@@ -1064,15 +1132,14 @@ function drawCanvas() {
       ctx.stroke();
     });
 
-    // Marco delimitador solo en la capa seleccionada
     if (isSel) {
-      ctx.strokeStyle = l.locked ? "#f59e0b" : "#06b6d4";
+      ctx.strokeStyle = eraserActive ? "#f59e0b" : (l.locked ? "#f59e0b" : "#06b6d4");
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 5]);
       ctx.strokeRect(l.box.x * SCALE, l.box.y * SCALE, l.box.w * SCALE, l.box.h * SCALE);
       ctx.setLineDash([]);
 
-      if (!l.locked) {
+      if (!l.locked && !eraserActive) {
         ctx.fillStyle = "#06b6d4";
         ctx.fillRect((l.box.x + l.box.w) * SCALE - 8, (l.box.y + l.box.h) * SCALE - 8, 16, 16);
       }
@@ -1081,6 +1148,7 @@ function drawCanvas() {
       ctx.font = "bold 12px sans-serif";
       ctx.fillText(`${l.name} (${l.box.w}×${l.box.h} mm)`, l.box.x * SCALE + 4, Math.max(15, l.box.y * SCALE - 5));
     }
+    ctx.restore();
   });
 
   // Rastro real dibujado en vivo (Rojo brillante)
@@ -1109,6 +1177,20 @@ function drawCanvas() {
   ctx.arc(cx, cy, 8, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2; ctx.stroke();
+
+  // Dibujar círculo indicador de la goma de borrar sobre el sketch
+  if (eraserActive && mouseSketchPos.inside) {
+    const rPx = (+document.getElementById('eraserSize').value / 2) * SCALE;
+    ctx.save();
+    ctx.fillStyle = "rgba(245, 158, 11, 0.25)";
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(mouseSketchPos.x * SCALE, mouseSketchPos.y * SCALE, rPx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function getCanvasMmCoords(e) {
@@ -1118,11 +1200,19 @@ function getCanvasMmCoords(e) {
   return { mx, my };
 }
 
+canvas.addEventListener('mouseenter', () => { mouseSketchPos.inside = true; drawCanvas(); });
+canvas.addEventListener('mouseleave', () => { mouseSketchPos.inside = false; drawCanvas(); });
+
 canvas.addEventListener('mousedown', (e) => {
   const { mx, my } = getCanvasMmCoords(e);
-  const cur = getActiveLayer();
 
-  // Primero verificar si se tocó la esquina de escala de la capa activa
+  if (eraserActive) {
+    isErasingMouse = true;
+    eraseOnSketchAt(mx, my);
+    return;
+  }
+
+  const cur = getActiveLayer();
   if (cur && cur.visible && !cur.locked) {
     if (Math.abs(mx - (cur.box.x + cur.box.w)) <= 8 && Math.abs(my - (cur.box.y + cur.box.h)) <= 8) {
       dragMode = 'resize';
@@ -1130,7 +1220,6 @@ canvas.addEventListener('mousedown', (e) => {
     }
   }
 
-  // Buscar si hizo clic dentro de alguna capa visible (de arriba hacia abajo)
   for (const l of layers) {
     if (!l.visible) continue;
     if (mx >= l.box.x && mx <= l.box.x + l.box.w && my >= l.box.y && my <= l.box.y + l.box.h) {
@@ -1145,10 +1234,20 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 window.addEventListener('mousemove', (e) => {
+  const { mx, my } = getCanvasMmCoords(e);
+  mouseSketchPos.x = mx;
+  mouseSketchPos.y = my;
+
+  if (eraserActive) {
+    if (isErasingMouse) eraseOnSketchAt(mx, my);
+    else if (mouseSketchPos.inside) drawCanvas();
+    return;
+  }
+
   if (!dragMode) return;
   const l = getActiveLayer();
   if (!l || l.locked) return;
-  const { mx, my } = getCanvasMmCoords(e);
+
   if (dragMode === 'move') {
     l.box.x = Math.max(0, Math.min(SHEET_W - l.box.w, Math.round(mx - dragOffset.x)));
     l.box.y = Math.max(0, Math.min(SHEET_H - l.box.h, Math.round(my - dragOffset.y)));
@@ -1163,7 +1262,15 @@ window.addEventListener('mousemove', (e) => {
   updateSketchTelemetry();
   drawCanvas();
 });
-window.addEventListener('mouseup', () => { dragMode = null; });
+
+window.addEventListener('mouseup', () => {
+  dragMode = null;
+  if (isErasingMouse) {
+    isErasingMouse = false;
+    const l = getActiveLayer();
+    if (l) processLayer(l); // Recalcula los contornos suaves después de borrar
+  }
+});
 
 function syncFromInputs() {
   const l = getActiveLayer();
@@ -1203,13 +1310,46 @@ function onManualSpeedInput(val) {
 }
 
 // =========================================================================
-// CONEXIÓN, JOGGING, CALIBRACIÓN E IMPRESIÓN MULTICAPA
+// CONEXIÓN, DESCARGA DESDE FLASH, JOGGING E IMPRESIÓN
 // =========================================================================
 
 function logConsole(txt) {
   const boxEl = document.getElementById('consoleLog');
   boxEl.innerHTML += String(txt).replace(/</g, "&lt;") + "<br>";
   boxEl.scrollTop = boxEl.scrollHeight;
+}
+
+async function downloadFlashFile(filename) {
+  try {
+    logConsole(`[HMI] Descargando /${filename} desde Flash...`);
+    const r = await fetch(`/${filename}`);
+    if (!r.ok) throw new Error("No encontrado");
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    logConsole(`[HMI] Archivo ${filename} descargado con éxito.`);
+  } catch (e) {
+    alert(`No se pudo descargar ${filename}. Verifica la conexión con el ESP32.`);
+  }
+}
+
+async function listFlashFiles() {
+  try {
+    const r = await fetch(`/files?path=/`);
+    const data = await r.json();
+    if (data && data.files) {
+      logConsole("[Flash] Archivos almacenados:");
+      data.files.forEach(f => logConsole(` • ${f.name} (${f.size} bytes)`));
+    }
+  } catch (e) {
+    logConsole("[Error] No se pudo leer el listado de Flash.");
+  }
 }
 
 function updateOriginLed() {
@@ -1425,9 +1565,9 @@ function saveConfigFlash() {
   logConsole("[HMI] Guardado en config.yaml");
 }
 
-// IMPRESIÓN SECUENCIAL DE TODAS LAS CAPAS VISIBLES
 async function startPrint() {
   if (isPrinting || isBusyMotion) return;
+  if (eraserActive) toggleEraser(false);
   const visibleLayers = [...layers].reverse().filter(l => l.visible && l.paths.length > 0);
   if (visibleLayers.length === 0) return alert("No hay capas visibles con trazos para imprimir.");
 
