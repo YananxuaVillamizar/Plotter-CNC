@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plotter CNC HMI - Control A4</title>
+<title>Plotter CNC Studio HMI - Control A4 Horizontal</title>
 <style>
   :root { --bg: #0f172a; --panel: #1e293b; --accent: #06b6d4; --text: #f8fafc; --muted: #94a3b8; --danger: #ef4444; --ok: #22c55e; --warn: #f59e0b; }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
   body { margin: 0; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-  aside { width: 415px; background: var(--panel); padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; border-right: 1px solid #334155; }
-  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; position: relative; }
-  h2 { margin: 0 0 8px 0; font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; }
-  .card { background: #0f172a; padding: 11px; border-radius: 8px; border: 1px solid #334155; }
-  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  aside { width: 435px; background: var(--panel); padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; border-right: 1px solid #334155; }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; position: relative; }
+  h2 { margin: 0 0 6px 0; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; display: flex; justify-content: space-between; align-items: center; }
+  .card { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
+  .row { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
   .row:last-child { margin-bottom: 0; }
-  input[type="text"], input[type="number"], select { background: #1e293b; border: 1px solid #475569; color: white; padding: 6px 8px; border-radius: 4px; width: 100%; }
-  button { background: #334155; color: white; border: none; padding: 8px 10px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.15s; font-size: 12px; }
+  input[type="text"], input[type="number"], select { background: #1e293b; border: 1px solid #475569; color: white; padding: 5px 8px; border-radius: 4px; width: 100%; font-size: 12px; }
+  button { background: #334155; color: white; border: none; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.15s; font-size: 11.5px; }
   button:hover { background: #475569; }
   button.primary { background: var(--accent); color: #0f172a; }
   button.primary:hover { background: #22d3ee; }
@@ -25,14 +25,22 @@
   button.warn:hover { background: #fbbf24; }
   button.danger { background: var(--danger); }
   button.danger:hover { background: #f87171; }
+  button.active-tool { background: var(--accent); color: #0f172a; }
   .tabs { display: flex; gap: 6px; }
-  .tab { flex: 1; text-align: center; padding: 8px; background: #0f172a; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid #334155; }
+  .tab { flex: 1; text-align: center; padding: 7px; background: #0f172a; border-radius: 6px; cursor: pointer; font-size: 12.5px; border: 1px solid #334155; }
   .tab.active { background: var(--accent); color: #0f172a; font-weight: bold; border-color: var(--accent); }
-  .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
-  #canvasWrap { background: #020617; padding: 12px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 2px solid #06b6d4; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid-edit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
+  #canvasWrap { background: #020617; padding: 10px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 2px solid #06b6d4; position: relative; }
   canvas { background: #ffffff; cursor: default; display: block; }
-  .status-bar { position: absolute; top: 12px; right: 20px; background: var(--panel); padding: 8px 14px; border-radius: 20px; font-size: 13px; border: 1px solid #334155; display: flex; gap: 14px; align-items: center; }
+  .preview-box { background: #020617; border: 1px dashed #475569; border-radius: 6px; padding: 6px; display: flex; gap: 8px; align-items: center; justify-content: center; min-height: 95px; margin-bottom: 7px; }
+  .preview-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .preview-col span { font-size: 10px; color: var(--muted); }
+  .preview-col canvas { max-width: 100%; max-height: 85px; border-radius: 4px; border: 1px solid #334155; background: #ffffff; }
+  .status-bar { position: absolute; top: 10px; right: 18px; background: var(--panel); padding: 7px 14px; border-radius: 20px; font-size: 12.5px; border: 1px solid #334155; display: flex; gap: 14px; align-items: center; }
+  .sketch-info-bar { margin-top: 10px; background: var(--panel); border: 1px solid #334155; border-radius: 8px; padding: 7px 14px; font-size: 11.5px; display: flex; gap: 14px; align-items: center; color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .sketch-info-bar b { color: var(--text); }
   .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--danger); margin-right: 6px; transition: 0.2s; flex-shrink: 0; }
   .dot.online { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
   .dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
@@ -42,7 +50,7 @@
   .pill.zero { color: var(--ok); border-color: rgba(34, 197, 94, 0.4); }
   .pill.moved { color: var(--warn); border-color: rgba(245, 158, 11, 0.4); }
   .jog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; align-items: center; }
-  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 11px; height: 85px; overflow-y: auto; padding: 6px; border-radius: 4px; border: 1px solid #334155; margin-bottom: 6px; }
+  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 11px; height: 72px; overflow-y: auto; padding: 6px; border-radius: 4px; border: 1px solid #334155; margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -55,65 +63,119 @@
       <input type="text" id="ipInput" value="192.168.1.61" placeholder="IP del ESP32">
       <button class="primary" onclick="connectESP()" style="width:auto; white-space:nowrap;">Reconectar</button>
     </div>
-    <div style="font-size:12px; color:var(--muted);" id="connMsg">Iniciando enlace...</div>
+    <div style="font-size:11.5px; color:var(--muted);" id="connMsg">Iniciando enlace...</div>
   </div>
 
   <!-- PESTAÑAS -->
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('design', this)">Diseño e Impresión</div>
+    <div class="tab active" onclick="switchTab('design', this)">Diseño CAD/CAM</div>
     <div class="tab" onclick="switchTab('calib', this)">Control y Calibración</div>
   </div>
 
   <!-- PANEL DISEÑO -->
-  <div id="tab-design" style="display:flex; flex-direction:column; gap:10px;">
+  <div id="tab-design" style="display:flex; flex-direction:column; gap:8px;">
+    <!-- 2. ORIGEN DEL DISEÑO -->
     <div class="card">
-      <h2>2. Cargar Imagen, Texto o Prueba</h2>
-      <label>Subir imagen (.png, .jpg, .svg):</label>
-      <input type="file" id="imgInput" accept="image/*" style="margin-bottom:8px; font-size:12px;">
-      <label>Umbral de detección de bordes: <b id="threshVal" style="color:white;">128</b></label>
-      <input type="range" id="threshSlider" min="30" max="230" value="128" oninput="onThreshChange(this.value)" style="width:100%; margin-bottom:8px;">
-      <label>Escribir texto vectorizado:</label>
+      <h2>
+        <span>2. Origen: Imagen, Portapapeles o Texto</span>
+        <button class="danger" onclick="clearSketch()" style="padding:3px 7px; font-size:10.5px;">🗑️ Limpiar Sketch</button>
+      </h2>
       <div class="row">
-        <input type="text" id="textInput" placeholder="Ej: CNC PLOTTER 2026">
-        <button onclick="generateTextVectors()" style="width:auto;">Crear</button>
+        <input type="file" id="imgInput" accept="image/*" style="font-size:11px; flex:1;">
+        <button class="primary" onclick="pasteFromClipboard()" style="width:auto; white-space:nowrap;" title="También puedes usar Ctrl+V en cualquier parte">📋 Pegar (Ctrl+V)</button>
+      </div>
+      <div class="row">
+        <input type="text" id="textInput" placeholder="Escribir texto vectorizado (ej: CNC 2026)">
+        <button onclick="generateTextVectors()" style="width:auto;">Crear Texto</button>
+      </div>
+      <div class="row">
+        <button onclick="loadTestSquare()" style="width:100%;">📐 Cuadro de Calibración (50×50 mm)</button>
+      </div>
+    </div>
+
+    <!-- 3. ESTUDIO DE EDICIÓN DE IMAGEN Y VISTA PREVIA ORIGINAL -->
+    <div class="card">
+      <h2>
+        <span>3. Estudio de Edición y Vista Previa</span>
+        <button onclick="resetImageEdits()" style="padding:2px 6px; font-size:10px;">Restaurar Original</button>
+      </h2>
+
+      <!-- VISTA PREVIA DE IMAGEN ORIGINAL VS EDITADA -->
+      <div class="preview-box" id="previewContainer">
+        <span style="font-size:11px; color:var(--muted);" id="previewEmptyMsg">Aquí verás la imagen original y su edición al cargarla</span>
+        <div class="preview-col" id="colOrig" style="display:none;">
+          <span>Imagen Original</span>
+          <canvas id="origPreviewCanvas" width="140" height="90"></canvas>
+        </div>
+        <div class="preview-col" id="colEdit" style="display:none;">
+          <span>Editada / Procesada</span>
+          <canvas id="editPreviewCanvas" width="140" height="90"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-edit" style="margin-bottom:7px;">
+        <button onclick="stepRotation(-90)">↺ -90°</button>
+        <button onclick="stepRotation(90)">↻ +90°</button>
+        <button onclick="transformImage('flipH')">⇄ Espejo X</button>
+        <button onclick="transformImage('crop')">✂ Auto-Recortar</button>
+        <button id="btnRemoveBg" onclick="toggleFilter('removeBg')">🪄 Quitar Fondo</button>
+        <button id="btnInvert" onclick="toggleFilter('invert')">◐ Invertir Color</button>
+      </div>
+
+      <label>Rotación Libre: <b id="rotBadge" style="color:white;">0°</b></label>
+      <div class="row" style="margin-bottom:7px;">
+        <input type="range" id="rotSlider" min="0" max="360" value="0" oninput="setRotation(this.value)" style="flex:1;">
+        <input type="number" id="rotNum" min="0" max="360" value="0" oninput="setRotation(this.value)" style="width:62px;">
+        <button onclick="setRotation(0)" style="width:auto; padding:5px 7px;" title="Restablecer ángulo a 0°">0°</button>
+      </div>
+
+      <div class="row">
+        <div style="flex:1.3;">
+          <label>Método de Trazado (CAM):</label>
+          <select id="vecMode" onchange="processCurrentSource()">
+            <option value="contour" selected>✒️ Solo Contornos (Bordes)</option>
+            <option value="zigzag">⚡ Relleno Rápido (Zig-Zag)</option>
+            <option value="both">🎨 Híbrido (Contorno + Relleno)</option>
+          </select>
+        </div>
+        <div style="flex:0.9;">
+          <label>Densidad / Paso:</label>
+          <select id="scanStep" onchange="processCurrentSource()">
+            <option value="2">Fino (Alta)</option>
+            <option value="3" selected>Normal</option>
+            <option value="5">Rápido (Baja)</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Sensibilidad / Umbral de detección: <b id="threshVal" style="color:white;">128</b></label>
+      <input type="range" id="threshSlider" min="20" max="240" value="128" oninput="onThreshChange(this.value)" style="width:100%;">
+    </div>
+
+    <!-- 4. POSICIÓN Y ESCALA -->
+    <div class="card">
+      <h2>4. Posición y Tamaño en Hoja A4 Horizontal</h2>
+      <div class="grid-4">
+        <div><label>Posición X (0-297 mm)</label><input type="number" id="posX" value="40" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Posición Y (0-210 mm)</label><input type="number" id="posY" value="30" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Ancho X (mm)</label><input type="number" id="sizeW" value="100" step="1" oninput="syncFromInputs()"></div>
+        <div><label>Alto Y (mm)</label><input type="number" id="sizeH" value="100" step="1" oninput="syncFromInputs()"></div>
+      </div>
+    </div>
+
+    <!-- 5. VELOCIDAD Y EJECUCIÓN -->
+    <div class="card">
+      <h2>5. Velocidad: <b id="speedBadge" style="color:white;">350</b> mm/min</h2>
+      <div class="row">
+        <input type="range" id="speedSlider" min="50" max="500" value="350" oninput="setSpeed(this.value)">
+        <input type="number" id="speedNum" value="350" min="50" max="500" style="width:70px;" oninput="setSpeed(this.value)">
       </div>
       <div class="row" style="margin-top:6px;">
-        <button onclick="loadTestSquare()" style="width:100%;">📐 Cargar Cuadro de Prueba (50×50 mm)</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>3. Posición y Escala en Hoja A4</h2>
-      <div class="grid-4">
-        <div><label>Posición X (mm)</label><input type="number" id="posX" value="30" step="1" oninput="syncFromInputs()"></div>
-        <div><label>Posición Y (mm)</label><input type="number" id="posY" value="40" step="1" oninput="syncFromInputs()"></div>
-        <div><label>Ancho (mm)</label><input type="number" id="sizeW" value="100" step="1" oninput="syncFromInputs()"></div>
-        <div><label>Alto (mm)</label><input type="number" id="sizeH" value="100" step="1" oninput="syncFromInputs()"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>4. Velocidad de Impresión: <b id="speedBadge" style="color:white;">250</b> mm/min</h2>
-      <div class="row">
-        <input type="range" id="speedSlider" min="50" max="500" value="250" oninput="setSpeed(this.value)">
-        <input type="number" id="speedNum" value="250" min="50" max="500" style="width:75px;" oninput="setSpeed(this.value)">
-      </div>
-      <div class="row" style="justify-content:space-between;">
-        <button onclick="stepSpeed(-10)">-10</button>
-        <button onclick="stepSpeed(-1)">-1</button>
-        <span style="font-size:11px; color:var(--muted);">Máx. 500 mm/min</span>
-        <button onclick="stepSpeed(1)">+1</button>
-        <button onclick="stepSpeed(10)">+10</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row">
         <button class="ok" id="btnStart" style="flex:2; font-size:13px;" onclick="startPrint()">▶ IMPRIMIR</button>
         <button class="warn" id="btnPause" style="flex:1.4; font-size:12px;" onclick="togglePause()">⏸ PAUSAR</button>
         <button class="danger" style="flex:1.2; font-size:12px;" onclick="stopPrintClean()">⏹ PARAR</button>
       </div>
-      <div style="font-size:12px; color:var(--muted); margin-top:6px;" id="printProgress">Listo. Carga una imagen, texto o cuadro de prueba.</div>
+      <div style="font-size:11.5px; color:var(--muted); margin-top:6px;" id="printProgress">Listo. Pega (Ctrl+V), sube una imagen o escribe texto.</div>
     </div>
   </div>
 
@@ -153,7 +215,7 @@
         <button onclick="jog('X', -1)">X -</button>
         <div style="display:flex; flex-direction:column; gap:4px;">
           <button class="primary" onclick="setOrigin()" style="padding:5px;" title="Fija la posición actual (X,Y,Z) como (0,0,0)">Fijar 0,0,0</button>
-          <button onclick="goHome()" style="padding:5px;" title="Sube Z primero, regresa X e Y al origen, y baja Z a 0">Ir a 0,0,0</button>
+          <button onclick="goHome()" style="padding:5px;" title="Regresa de forma inteligente al origen (0,0,0) solo si algún eje se movió">Ir a 0,0,0</button>
         </div>
         <button onclick="jog('X', 1)">X +</button>
 
@@ -192,7 +254,7 @@
     <h2>Consola FluidNC</h2>
     <div class="console-box" id="consoleLog"></div>
     <div class="row">
-      <input type="text" id="manualCmd" placeholder="Enviar comando (ej: $X, G0 X10)..." onkeydown="if(event.key==='Enter') sendManual()">
+      <input type="text" id="manualCmd" placeholder="Comando (ej: $X, G0 X10)..." onkeydown="if(event.key==='Enter') sendManual()">
       <button onclick="sendManual()" style="width:auto;">Enviar</button>
     </div>
   </div>
@@ -206,16 +268,27 @@
     <span>Z: <b id="liveZ">0.0</b> mm</span>
   </div>
 
+  <!-- HOJA A4 HORIZONTAL: 297 mm (Ancho X) x 210 mm (Alto Y) -->
   <div id="canvasWrap">
-    <canvas id="a4Canvas" width="420" height="594"></canvas>
+    <canvas id="a4Canvas" width="653" height="462"></canvas>
   </div>
-  <div style="margin-top:8px; font-size:12px; color:var(--muted);">
-    Vista Superior A4 (210 × 297 mm) • Arrastra el centro para mover o la esquina cian inferior derecha para escalar
+
+  <!-- SUBMENÚ DE DIMENSIONES Y TELEMETRÍA DE LA IMAGEN -->
+  <div class="sketch-info-bar">
+    <span>Hoja: <b>A4 Horizontal (297×210 mm)</b></span>
+    <span>Origen: <b id="infoOrigin">X: 40, Y: 30 mm</b></span>
+    <span>Dimensiones: <b id="infoDims">100 × 100 mm</b></span>
+    <span>Rotación: <b id="infoRot">0°</b></span>
+    <span>Trazos: <b id="infoPaths">0</b></span>
+    <button onclick="clearSketch()" style="padding:3px 8px; font-size:11px;">🧹 Limpiar</button>
   </div>
 </main>
 
 <script>
-const SCALE = 2;
+const SHEET_W = 297;
+const SHEET_H = 210;
+const SCALE = 2.2;
+
 const canvas = document.getElementById('a4Canvas');
 const ctx = canvas.getContext('2d');
 
@@ -223,9 +296,13 @@ if (window.location.hostname) document.getElementById('ipInput').value = window.
 
 let statusTimer = null;
 let currentState = "Offline";
-let loadedImg = null;
+let pristineCanvas = null; // Copia intacta de la imagen original cargada
+let sourceCanvas = null;   // Copia tras recorte o espejo
+let rotationDeg = 0;
+let baseBoxRatio = 1;
+let imgFilters = { removeBg: false, invert: false };
 let paths = [];
-let box = { x: 30, y: 40, w: 100, h: 100 };
+let box = { x: 40, y: 30, w: 100, h: 100 };
 let livePos = { x: 0, y: 0, z: 0 };
 let wcoOffset = { x: 0, y: 0, z: 0 };
 let ignorePollUntil = 0;
@@ -393,25 +470,93 @@ async function connectESP() {
   }
 }
 
-// --- VECTORIZACIÓN Y DISEÑOS ---
-function onThreshChange(val) {
-  document.getElementById('threshVal').innerText = val;
+// =========================================================================
+// CARGA DE IMÁGENES, VISTA PREVIA ORIGINAL Y EDICIÓN
+// =========================================================================
+
+function cloneCanvas(src) {
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  c.getContext('2d').drawImage(src, 0, 0);
+  return c;
+}
+
+function renderOriginalPreview() {
+  const emptyMsg = document.getElementById('previewEmptyMsg');
+  const colOrig = document.getElementById('colOrig');
+  const colEdit = document.getElementById('colEdit');
+
+  if (!pristineCanvas) {
+    emptyMsg.style.display = 'block';
+    colOrig.style.display = 'none';
+    colEdit.style.display = 'none';
+    return;
+  }
+
+  emptyMsg.style.display = 'none';
+  colOrig.style.display = 'flex';
+  colEdit.style.display = 'flex';
+
+  const oc = document.getElementById('origPreviewCanvas');
+  oc.width = 160;
+  oc.height = Math.max(40, Math.min(100, Math.round(160 * (pristineCanvas.height / pristineCanvas.width))));
+  const octx = oc.getContext('2d');
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, oc.width, oc.height);
+  octx.drawImage(pristineCanvas, 0, 0, oc.width, oc.height);
+}
+
+function renderEditedPreview(processedCanvas) {
+  if (!processedCanvas) return;
+  const ec = document.getElementById('editPreviewCanvas');
+  ec.width = 160;
+  ec.height = Math.max(40, Math.min(100, Math.round(160 * (processedCanvas.height / processedCanvas.width))));
+  const ectx = ec.getContext('2d');
+  ectx.fillStyle = "#ffffff";
+  ectx.fillRect(0, 0, ec.width, ec.height);
+  ectx.drawImage(processedCanvas, 0, 0, ec.width, ec.height);
+}
+
+function loadImageElementToEditor(img) {
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const cctx = c.getContext('2d');
+  cctx.fillStyle = "#ffffff";
+  cctx.fillRect(0, 0, c.width, c.height);
+  cctx.drawImage(img, 0, 0);
+
+  pristineCanvas = cloneCanvas(c);
+  sourceCanvas = cloneCanvas(c);
+  rotationDeg = 0;
+  updateRotUI(0);
+  imgFilters = { removeBg: false, invert: false };
+  document.getElementById('btnRemoveBg').classList.remove('active-tool');
+  document.getElementById('btnInvert').classList.remove('active-tool');
+
+  renderOriginalPreview();
+  baseBoxRatio = img.height / img.width;
+  box.w = 110;
+  box.h = Math.max(12, Math.min(SHEET_H - box.y, Math.round(110 * baseBoxRatio)));
+  updateInputsFromBox();
   processCurrentSource();
 }
 
-function loadTestSquare() {
-  loadedImg = null;
-  box = { x: 20, y: 20, w: 50, h: 50 };
+function resetImageEdits() {
+  if (!pristineCanvas) return;
+  sourceCanvas = cloneCanvas(pristineCanvas);
+  rotationDeg = 0;
+  updateRotUI(0);
+  imgFilters = { removeBg: false, invert: false };
+  document.getElementById('btnRemoveBg').classList.remove('active-tool');
+  document.getElementById('btnInvert').classList.remove('active-tool');
+  baseBoxRatio = pristineCanvas.height / pristineCanvas.width;
+  box.w = 110;
+  box.h = Math.max(12, Math.min(SHEET_H - box.y, Math.round(110 * baseBoxRatio)));
   updateInputsFromBox();
-  paths = [
-    [{x:0, y:0}, {x:1, y:0}, {x:1, y:1}, {x:0, y:1}, {x:0, y:0}],
-    [{x:0, y:0}, {x:1, y:1}],
-    [{x:1, y:0}, {x:0, y:1}]
-  ];
-  tracedPaths = [];
-  document.getElementById('printProgress').innerText = "Cuadro de prueba 50×50 mm listo.";
-  logConsole("[HMI] Cuadro de prueba cargado.");
-  drawCanvas();
+  processCurrentSource();
+  logConsole("[HMI] Imagen restaurada a su estado original.");
 }
 
 document.getElementById('imgInput').addEventListener('change', (e) => {
@@ -420,73 +565,402 @@ document.getElementById('imgInput').addEventListener('change', (e) => {
   const reader = new FileReader();
   reader.onload = (ev) => {
     const img = new Image();
-    img.onload = () => {
-      loadedImg = img;
-      const aspect = img.height / img.width;
-      box.w = 100;
-      box.h = Math.max(10, Math.round(100 * aspect));
-      updateInputsFromBox();
-      processCurrentSource();
-    };
+    img.onload = () => loadImageElementToEditor(img);
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 });
 
-function processCurrentSource() {
-  if (!loadedImg) return;
-  const off = document.createElement('canvas');
-  const res = 130;
-  off.width = res;
-  off.height = Math.max(10, Math.round(res * (loadedImg.height / loadedImg.width)));
-  const octx = off.getContext('2d');
-  octx.fillStyle = "white"; octx.fillRect(0, 0, off.width, off.height);
-  octx.drawImage(loadedImg, 0, 0, off.width, off.height);
-  const data = octx.getImageData(0, 0, off.width, off.height).data;
-  const thresh = +document.getElementById('threshSlider').value;
-
-  paths = [];
-  for (let y = 0; y < off.height; y += 2) {
-    let seg = [];
-    for (let x = 0; x < off.width; x++) {
-      const idx = (y * off.width + x) * 4;
-      const lum = (data[idx] + data[idx+1] + data[idx+2]) / 3;
-      if (lum < thresh) seg.push({ x: x / off.width, y: y / off.height });
-      else if (seg.length > 1) { paths.push([seg[0], seg[seg.length - 1]]); seg = []; }
-      else seg = [];
+window.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          loadImageElementToEditor(img);
+          logConsole("[HMI] Imagen pegada desde el portapapeles.");
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+      break;
     }
-    if (seg.length > 1) paths.push([seg[0], seg[seg.length - 1]]);
   }
+});
+
+async function pasteFromClipboard() {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const imgType = item.types.find(t => t.startsWith('image/'));
+      if (imgType) {
+        const blob = await item.getType(imgType);
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          loadImageElementToEditor(img);
+          URL.revokeObjectURL(url);
+          logConsole("[HMI] Imagen pegada desde el portapapeles.");
+        };
+        img.src = url;
+        return;
+      }
+    }
+    alert("No hay ninguna imagen copiada en tu portapapeles.");
+  } catch (err) {
+    alert("Presiona Ctrl + V directamente en la página para pegar tu imagen.");
+  }
+}
+
+function clearSketch() {
+  pristineCanvas = null;
+  sourceCanvas = null;
+  rotationDeg = 0;
+  updateRotUI(0);
+  paths = [];
   tracedPaths = [];
-  document.getElementById('printProgress').innerText = `Vectorizado: ${paths.length} trazos listos.`;
+  currentTrace = null;
+  renderOriginalPreview();
+  document.getElementById('imgInput').value = "";
+  document.getElementById('textInput').value = "";
+  document.getElementById('printProgress').innerText = "Lienzo limpio. Listo para un nuevo diseño.";
+  updateSketchTelemetry();
   drawCanvas();
+  logConsole("[HMI] Sketch limpiado.");
+}
+
+function updateRotUI(deg) {
+  document.getElementById('rotSlider').value = deg;
+  document.getElementById('rotNum').value = deg;
+  document.getElementById('rotBadge').innerText = deg + "°";
+  document.getElementById('infoRot').innerText = deg + "°";
+}
+
+function setRotation(val) {
+  let deg = parseFloat(val);
+  if (isNaN(deg)) deg = 0;
+  deg = ((deg % 360) + 360) % 360;
+  rotationDeg = Math.round(deg);
+  updateRotUI(rotationDeg);
+
+  if (sourceCanvas) {
+    const rad = rotationDeg * Math.PI / 180;
+    const absCos = Math.abs(Math.cos(rad));
+    const absSin = Math.abs(Math.sin(rad));
+    const baseW = 110;
+    const baseH = 110 * baseBoxRatio;
+    const rotW = baseW * absCos + baseH * absSin;
+    const rotH = baseW * absSin + baseH * absCos;
+    const scaleFactor = Math.min((SHEET_W - box.x) / rotW, (SHEET_H - box.y) / rotH, 1);
+    box.w = Math.max(12, Math.round(rotW * scaleFactor));
+    box.h = Math.max(12, Math.round(rotH * scaleFactor));
+    updateInputsFromBox();
+    processCurrentSource();
+  } else if (paths.length > 0) {
+    drawCanvas();
+  }
+}
+
+function stepRotation(delta) {
+  setRotation(rotationDeg + delta);
+}
+
+function toggleFilter(filterName) {
+  if (!sourceCanvas) return;
+  imgFilters[filterName] = !imgFilters[filterName];
+  document.getElementById(filterName === 'removeBg' ? 'btnRemoveBg' : 'btnInvert').classList.toggle('active-tool', imgFilters[filterName]);
+  processCurrentSource();
+}
+
+function transformImage(action) {
+  if (!sourceCanvas) return alert("Primero carga, pega una imagen o crea un texto.");
+  const srcW = sourceCanvas.width;
+  const srcH = sourceCanvas.height;
+  const dst = document.createElement('canvas');
+  const dctx = dst.getContext('2d');
+
+  if (action === 'flipH') {
+    dst.width = srcW;
+    dst.height = srcH;
+    dctx.translate(srcW, 0);
+    dctx.scale(-1, 1);
+    dctx.drawImage(sourceCanvas, 0, 0);
+  } else if (action === 'crop') {
+    const sctx = sourceCanvas.getContext('2d');
+    const data = sctx.getImageData(0, 0, srcW, srcH).data;
+    let minX = srcW, minY = srcH, maxX = 0, maxY = 0, found = false;
+    for (let y = 0; y < srcH; y++) {
+      for (let x = 0; x < srcW; x++) {
+        const i = (y * srcW + x) * 4;
+        const lum = (data[i] + data[i+1] + data[i+2]) / 3;
+        if (lum < 235) {
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+          found = true;
+        }
+      }
+    }
+    if (!found) return;
+    const cw = Math.max(1, maxX - minX + 1);
+    const ch = Math.max(1, maxY - minY + 1);
+    dst.width = cw; dst.height = ch;
+    dctx.drawImage(sourceCanvas, minX, minY, cw, ch, 0, 0, cw, ch);
+    baseBoxRatio = ch / cw;
+    box.h = Math.max(12, Math.min(SHEET_H - box.y, Math.round(box.w * baseBoxRatio)));
+    updateInputsFromBox();
+  }
+
+  sourceCanvas = dst;
+  processCurrentSource();
 }
 
 function generateTextVectors() {
   const txt = document.getElementById('textInput').value.trim();
   if (!txt) return alert("Escribe un texto primero.");
   const off = document.createElement('canvas');
-  off.width = Math.max(300, txt.length * 32); off.height = 80;
+  off.width = Math.max(320, txt.length * 42);
+  off.height = 100;
   const octx = off.getContext('2d');
-  octx.fillStyle = "white"; octx.fillRect(0, 0, off.width, off.height);
-  octx.fillStyle = "black"; octx.font = "bold 44px Arial";
-  octx.fillText(txt, 10, 56);
-  const img = new Image();
-  img.onload = () => {
-    loadedImg = img;
-    box.w = 140; box.h = Math.round(140 * (off.height / off.width));
-    updateInputsFromBox(); processCurrentSource();
-  };
-  img.src = off.toDataURL();
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, off.width, off.height);
+  octx.fillStyle = "#000000";
+  octx.font = "bold 62px Arial";
+  octx.textBaseline = "middle";
+  octx.fillText(txt, 14, 52);
+
+  pristineCanvas = cloneCanvas(off);
+  sourceCanvas = cloneCanvas(off);
+  rotationDeg = 0;
+  updateRotUI(0);
+  imgFilters = { removeBg: false, invert: false };
+  document.getElementById('btnRemoveBg').classList.remove('active-tool');
+  document.getElementById('btnInvert').classList.remove('active-tool');
+  renderOriginalPreview();
+
+  baseBoxRatio = off.height / off.width;
+  box.w = 150;
+  box.h = Math.max(15, Math.round(150 * baseBoxRatio));
+  updateInputsFromBox();
+  processCurrentSource();
 }
 
-// --- LIENZO INTERACTIVO A4 ---
+function loadTestSquare() {
+  pristineCanvas = null;
+  sourceCanvas = null;
+  rotationDeg = 0;
+  updateRotUI(0);
+  renderOriginalPreview();
+  box = { x: 20, y: 20, w: 50, h: 50 };
+  updateInputsFromBox();
+  paths = [
+    [{x:0, y:0}, {x:1, y:0}, {x:1, y:1}, {x:0, y:1}, {x:0, y:0}],
+    [{x:0, y:0}, {x:1, y:1}],
+    [{x:1, y:0}, {x:0, y:1}]
+  ];
+  tracedPaths = [];
+  updateSketchTelemetry();
+  document.getElementById('printProgress').innerText = "Cuadro de prueba 50×50 mm listo.";
+  logConsole("[HMI] Cuadro de prueba cargado.");
+  drawCanvas();
+}
+
+function onThreshChange(val) {
+  document.getElementById('threshVal').innerText = val;
+  processCurrentSource();
+}
+
+// =========================================================================
+// MOTOR DE VECTORIZACIÓN INTELIGENTE
+// =========================================================================
+
+function processCurrentSource() {
+  if (!sourceCanvas) return;
+  const mode = document.getElementById('vecMode').value;
+  const step = +document.getElementById('scanStep').value;
+  const thresh = +document.getElementById('threshSlider').value;
+
+  const rad = rotationDeg * Math.PI / 180;
+  const absCos = Math.abs(Math.cos(rad));
+  const absSin = Math.abs(Math.sin(rad));
+  const rotW = Math.ceil(sourceCanvas.width * absCos + sourceCanvas.height * absSin);
+  const rotH = Math.ceil(sourceCanvas.width * absSin + sourceCanvas.height * absCos);
+
+  const rotCanvas = document.createElement('canvas');
+  rotCanvas.width = rotW;
+  rotCanvas.height = rotH;
+  const rctx = rotCanvas.getContext('2d');
+  rctx.fillStyle = "#ffffff";
+  rctx.fillRect(0, 0, rotW, rotH);
+  rctx.translate(rotW / 2, rotH / 2);
+  rctx.rotate(rad);
+  rctx.drawImage(sourceCanvas, -sourceCanvas.width / 2, -sourceCanvas.height / 2);
+
+  // Actualizar mini vista previa de la versión editada
+  renderEditedPreview(rotCanvas);
+
+  const off = document.createElement('canvas');
+  const res = step === 2 ? 180 : (step === 3 ? 140 : 100);
+  off.width = res;
+  off.height = Math.max(12, Math.round(res * (rotH / rotW)));
+  const octx = off.getContext('2d');
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, off.width, off.height);
+  octx.drawImage(rotCanvas, 0, 0, off.width, off.height);
+
+  const imgData = octx.getImageData(0, 0, off.width, off.height);
+  const d = imgData.data;
+  const W = off.width, H = off.height;
+
+  const bin = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    let lum = (d[i*4] + d[i*4+1] + d[i*4+2]) / 3;
+    if (imgFilters.removeBg && lum > 205) lum = 255;
+    if (imgFilters.invert) lum = 255 - lum;
+    bin[i] = lum < thresh ? 1 : 0;
+  }
+
+  let newPaths = [];
+
+  if (mode === 'contour' || mode === 'both') {
+    const edge = new Uint8Array(W * H);
+    for (let y = 1; y < H - 1; y++) {
+      for (let x = 1; x < W - 1; x++) {
+        const idx = y * W + x;
+        if (bin[idx] === 1) {
+          if (bin[idx - 1] === 0 || bin[idx + 1] === 0 || bin[idx - W] === 0 || bin[idx + W] === 0) {
+            edge[idx] = 1;
+          }
+        }
+      }
+    }
+
+    const visited = new Uint8Array(W * H);
+    const dirs = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+    let rawContours = [];
+
+    for (let y = 1; y < H - 1; y++) {
+      for (let x = 1; x < W - 1; x++) {
+        const startIdx = y * W + x;
+        if (edge[startIdx] === 1 && !visited[startIdx]) {
+          let poly = [];
+          let cx = x, cy = y;
+          while (true) {
+            const cIdx = cy * W + cx;
+            visited[cIdx] = 1;
+            poly.push({ x: cx / W, y: cy / H });
+            let moved = false;
+            for (const [dx, dy] of dirs) {
+              const nx = cx + dx, ny = cy + dy;
+              if (nx > 0 && nx < W - 1 && ny > 0 && ny < H - 1) {
+                const nIdx = ny * W + nx;
+                if (edge[nIdx] === 1 && !visited[nIdx]) {
+                  cx = nx; cy = ny; moved = true; break;
+                }
+              }
+            }
+            if (!moved) break;
+          }
+          if (poly.length >= 2) rawContours.push(simplifyPolyline(poly, 0.005));
+        }
+      }
+    }
+    newPaths.push(...optimizePathOrder(rawContours));
+  }
+
+  if (mode === 'zigzag' || mode === 'both') {
+    const yInc = mode === 'both' ? 3 : 2;
+    let leftToRight = true;
+    for (let y = 0; y < H; y += yInc) {
+      let rowSegs = [];
+      let seg = [];
+      for (let x = 0; x < W; x++) {
+        if (bin[y * W + x] === 1) {
+          seg.push({ x: x / W, y: y / H });
+        } else if (seg.length > 1) {
+          rowSegs.push([seg[0], seg[seg.length - 1]]);
+          seg = [];
+        } else {
+          seg = [];
+        }
+      }
+      if (seg.length > 1) rowSegs.push([seg[0], seg[seg.length - 1]]);
+
+      if (rowSegs.length > 0) {
+        if (!leftToRight) {
+          rowSegs.reverse();
+          rowSegs = rowSegs.map(s => [s[1], s[0]]);
+        }
+        newPaths.push(...rowSegs);
+        leftToRight = !leftToRight;
+      }
+    }
+  }
+
+  paths = newPaths;
+  tracedPaths = [];
+  updateSketchTelemetry();
+  document.getElementById('printProgress').innerText = `Vectorizado (${mode}, ${rotationDeg}°): ${paths.length} trazos listos.`;
+  drawCanvas();
+}
+
+function simplifyPolyline(pts, tol) {
+  if (pts.length <= 2) return pts;
+  let maxD = 0, idx = 0;
+  const a = pts[0], b = pts[pts.length - 1];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = Math.hypot(pts[i].x - (a.x + b.x)/2, pts[i].y - (a.y + b.y)/2);
+    if (d > maxD) { maxD = d; idx = i; }
+  }
+  if (maxD > tol) {
+    return [...simplifyPolyline(pts.slice(0, idx + 1), tol).slice(0, -1), ...simplifyPolyline(pts.slice(idx), tol)];
+  }
+  return [a, b];
+}
+
+function optimizePathOrder(list) {
+  if (list.length <= 1) return list;
+  let remaining = list.slice();
+  let ordered = [];
+  let cur = { x: 0, y: 0 };
+
+  while (remaining.length > 0) {
+    let bestIdx = 0, bestDist = Infinity, reverseBest = false;
+    for (let i = 0; i < remaining.length; i++) {
+      const p = remaining[i];
+      const dStart = Math.hypot(p[0].x - cur.x, p[0].y - cur.y);
+      const dEnd = Math.hypot(p[p.length - 1].x - cur.x, p[p.length - 1].y - cur.y);
+      if (dStart < bestDist) { bestDist = dStart; bestIdx = i; reverseBest = false; }
+      if (dEnd < bestDist) { bestDist = dEnd; bestIdx = i; reverseBest = true; }
+    }
+    let chosen = remaining.splice(bestIdx, 1)[0];
+    if (reverseBest) chosen = chosen.slice().reverse();
+    ordered.push(chosen);
+    cur = chosen[chosen.length - 1];
+  }
+  return ordered;
+}
+
+// =========================================================================
+// LIENZO INTERACTIVO A4 HORIZONTAL (297 x 210 mm) Y TELEMETRÍA
+// =========================================================================
+
+function updateSketchTelemetry() {
+  document.getElementById('infoOrigin').innerText = `X: ${box.x}, Y: ${box.y} mm`;
+  document.getElementById('infoDims').innerText = `${box.w} × ${box.h} mm`;
+  document.getElementById('infoRot').innerText = `${rotationDeg}°`;
+  document.getElementById('infoPaths').innerText = paths.length;
+}
+
 function drawCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
-  for (let x = 0; x <= 210; x += 10) { ctx.beginPath(); ctx.moveTo(x * SCALE, 0); ctx.lineTo(x * SCALE, canvas.height); ctx.stroke(); }
-  for (let y = 0; y <= 297; y += 10) { ctx.beginPath(); ctx.moveTo(0, y * SCALE); ctx.lineTo(canvas.width, y * SCALE); ctx.stroke(); }
+  for (let x = 0; x <= SHEET_W; x += 10) { ctx.beginPath(); ctx.moveTo(x * SCALE, 0); ctx.lineTo(x * SCALE, canvas.height); ctx.stroke(); }
+  for (let y = 0; y <= SHEET_H; y += 10) { ctx.beginPath(); ctx.moveTo(0, y * SCALE); ctx.lineTo(canvas.width, y * SCALE); ctx.stroke(); }
 
   ctx.strokeStyle = "#06b6d4"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
   ctx.strokeRect(box.x * SCALE, box.y * SCALE, box.w * SCALE, box.h * SCALE);
@@ -494,7 +968,11 @@ function drawCanvas() {
   ctx.fillStyle = "#06b6d4";
   ctx.fillRect((box.x + box.w) * SCALE - 6, (box.y + box.h) * SCALE - 6, 12, 12);
 
-  ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1.4;
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 10px sans-serif";
+  ctx.fillText(`${box.w}×${box.h} mm (${rotationDeg}°)`, box.x * SCALE + 4, Math.max(12, box.y * SCALE - 4));
+
+  ctx.strokeStyle = "#64748b"; ctx.lineWidth = 1.3;
   paths.forEach(p => {
     ctx.beginPath();
     p.forEach((pt, i) => {
@@ -546,13 +1024,14 @@ window.addEventListener('mousemove', (e) => {
   const mx = (e.clientX - rect.left) / SCALE;
   const my = (e.clientY - rect.top) / SCALE;
   if (dragMode === 'move') {
-    box.x = Math.max(0, Math.min(210 - box.w, Math.round(mx - dragOffset.x)));
-    box.y = Math.max(0, Math.min(297 - box.h, Math.round(my - dragOffset.y)));
+    box.x = Math.max(0, Math.min(SHEET_W - box.w, Math.round(mx - dragOffset.x)));
+    box.y = Math.max(0, Math.min(SHEET_H - box.h, Math.round(my - dragOffset.y)));
   } else if (dragMode === 'resize') {
-    box.w = Math.max(10, Math.min(210 - box.x, Math.round(mx - box.x)));
-    box.h = Math.max(10, Math.min(297 - box.y, Math.round(my - box.y)));
+    box.w = Math.max(10, Math.min(SHEET_W - box.x, Math.round(mx - box.x)));
+    box.h = Math.max(10, Math.min(SHEET_H - box.y, Math.round(my - box.y)));
   }
-  updateInputsFromBox(); drawCanvas();
+  updateInputsFromBox();
+  drawCanvas();
 });
 window.addEventListener('mouseup', () => { dragMode = null; });
 
@@ -561,21 +1040,26 @@ function updateInputsFromBox() {
   document.getElementById('posY').value = box.y;
   document.getElementById('sizeW').value = box.w;
   document.getElementById('sizeH').value = box.h;
+  updateSketchTelemetry();
 }
 function syncFromInputs() {
-  box.x = Math.max(0, Math.min(200, +document.getElementById('posX').value || 0));
-  box.y = Math.max(0, Math.min(287, +document.getElementById('posY').value || 0));
-  box.w = Math.max(10, Math.min(210 - box.x, +document.getElementById('sizeW').value || 10));
-  box.h = Math.max(10, Math.min(297 - box.y, +document.getElementById('sizeH').value || 10));
+  box.x = Math.max(0, Math.min(SHEET_W - 10, +document.getElementById('posX').value || 0));
+  box.y = Math.max(0, Math.min(SHEET_H - 10, +document.getElementById('posY').value || 0));
+  box.w = Math.max(10, Math.min(SHEET_W - box.x, +document.getElementById('sizeW').value || 10));
+  box.h = Math.max(10, Math.min(SHEET_H - box.y, +document.getElementById('sizeH').value || 10));
+  updateSketchTelemetry();
   drawCanvas();
 }
 function setSpeed(val) {
-  val = Math.max(50, Math.min(500, parseInt(val) || 250));
+  val = Math.max(50, Math.min(500, parseInt(val) || 350));
   document.getElementById('speedSlider').value = val;
   document.getElementById('speedNum').value = val;
   document.getElementById('speedBadge').innerText = val;
 }
-function stepSpeed(delta) { setSpeed((parseInt(document.getElementById('speedNum').value) || 250) + delta); }
+
+// =========================================================================
+// CONTROL DE MOVIMIENTO, RETORNO INTELIGENTE E IMPRESIÓN
+// =========================================================================
 
 function jog(axis, dir, customDist) {
   const dist = customDist || +document.getElementById('jogStep').value;
@@ -592,35 +1076,48 @@ async function setOrigin() {
   tracedPaths = [];
   updateOriginLed();
   drawCanvas();
-
   await sendCmd('G92 X0 Y0 Z0');
   logConsole("[HMI] Posición actual fijada como Origen 3D (0,0,0)");
 }
 
-// --- RETORNO SEGURO AL ORIGEN (PRIMERO SUBE Z, LUEGO MUEVE X/Y, LUEGO BAJA Z) ---
+// RETORNO INTELIGENTE AL ORIGEN: No mueve nada si ya está en (0,0,0)
 async function goHome() {
   if (isPrinting || isBusyMotion) return;
+
+  const xyAtZero = Math.abs(livePos.x) <= 0.15 && Math.abs(livePos.y) <= 0.15;
+  const zAtZero = Math.abs(livePos.z) <= 0.15;
+
+  if (xyAtZero && zAtZero) {
+    logConsole("[HMI] El cabezal ya está en el origen (0, 0, 0). Sin movimientos innecesarios.");
+    return;
+  }
+
   isBusyMotion = true;
   const feed = +document.getElementById('speedNum').value;
-
-  logConsole("[HMI] Retorno seguro: 1) Subiendo Eje Z a altura libre (5 mm)...");
   await sendCmd("G90");
-  await sendCmd(`G1 Z5 F${feed}`);
-  await waitUntilIdle();
 
-  if (isBusyMotion) {
-    logConsole("[HMI] Retorno seguro: 2) Desplazando X e Y al origen (0, 0)...");
-    await sendCmd(`G1 X0 Y0 F${feed}`);
-    await waitUntilIdle();
+  // Si X o Y están lejos del origen, subir Z primero a 5 mm para viajar sin chocar
+  if (!xyAtZero) {
+    if (livePos.z < 4.9) {
+      logConsole("[HMI] Retorno seguro: 1) Subiendo Eje Z a altura libre (5 mm)...");
+      await sendCmd(`G1 Z5 F${feed}`);
+      await waitUntilIdle();
+    }
+    if (isBusyMotion) {
+      logConsole("[HMI] Retorno seguro: 2) Desplazando X e Y al origen (0, 0)...");
+      await sendCmd(`G1 X0 Y0 F${feed}`);
+      await waitUntilIdle();
+    }
   }
 
-  if (isBusyMotion) {
-    logConsole("[HMI] Retorno seguro: 3) Posicionando Eje Z en 0.0...");
+  // Bajar o ajustar Z a 0.0 solo si Z no está en 0.0
+  if (isBusyMotion && Math.abs(livePos.z) > 0.15) {
+    logConsole("[HMI] Retorno seguro: Posicionando Eje Z en 0.0...");
     await sendCmd(`G1 Z0 F${feed}`);
     await waitUntilIdle();
-    logConsole("[HMI] Cabezal en el origen (0, 0, 0).");
   }
 
+  logConsole("[HMI] Cabezal en el origen (0, 0, 0).");
   isBusyMotion = false;
 }
 
@@ -639,10 +1136,9 @@ function saveConfigFlash() {
   logConsole("[HMI] Guardado en config.yaml");
 }
 
-// --- IMPRESIÓN CON PAUSA/CONTINUAR Y PARADA LIMPIA ---
 async function startPrint() {
   if (isPrinting || isBusyMotion) return;
-  if (paths.length === 0) return alert("Primero carga una imagen, texto o el cuadro de prueba.");
+  if (paths.length === 0) return alert("Primero carga una imagen, pega con Ctrl+V o escribe texto.");
   const feed = +document.getElementById('speedNum').value;
   tracedPaths = [];
   currentTrace = null;
@@ -653,18 +1149,28 @@ async function startPrint() {
   await sendCmd('$X');
 
   let gcode = ["G21", "G90", `G1 Z5 F${feed}`];
+  let lastX = null, lastY = null;
+
   paths.forEach(p => {
-    const x0 = (box.x + p[0].x * box.w).toFixed(2);
-    const y0 = (box.y + p[0].y * box.h).toFixed(2);
-    gcode.push(`G1 X${x0} Y${y0} F${feed}`);
-    gcode.push(`G1 Z0 F${feed}`);
-    for (let i = 1; i < p.length; i++) {
-      const xi = (box.x + p[i].x * box.w).toFixed(2);
-      const yi = (box.y + p[i].y * box.h).toFixed(2);
-      gcode.push(`G1 X${xi} Y${yi} F${feed}`);
+    const x0 = +(box.x + p[0].x * box.w).toFixed(2);
+    const y0 = +(box.y + p[0].y * box.h).toFixed(2);
+    const isConnected = lastX !== null && Math.hypot(x0 - lastX, y0 - lastY) < 0.3;
+
+    if (!isConnected) {
+      if (lastX !== null) gcode.push(`G1 Z5 F${feed}`);
+      gcode.push(`G1 X${x0} Y${y0} F${feed}`);
+      gcode.push(`G1 Z0 F${feed}`);
     }
-    gcode.push(`G1 Z5 F${feed}`);
+
+    for (let i = 1; i < p.length; i++) {
+      const xi = +(box.x + p[i].x * box.w).toFixed(2);
+      const yi = +(box.y + p[i].y * box.h).toFixed(2);
+      gcode.push(`G1 X${xi} Y${yi} F${feed}`);
+      lastX = xi; lastY = yi;
+    }
   });
+
+  gcode.push(`G1 Z5 F${feed}`);
   gcode.push(`G1 X0 Y0 F${feed}`);
 
   for (let i = 0; i < gcode.length; i++) {
@@ -711,14 +1217,14 @@ async function togglePause() {
   if (!isPaused) {
     isPaused = true;
     updatePauseBtn();
-    await sendCmd('!'); // Feed Hold suave sin perder coordenadas ni disparar Alarm
+    await sendCmd('!');
     document.getElementById('printProgress').innerText = "Impresión en pausa. Pulsa ▶ SEGUIR para continuar.";
     logConsole("[HMI] Movimiento pausado (!).");
     await pollStatus();
   } else {
     isPaused = false;
     updatePauseBtn();
-    await sendCmd('~'); // Cycle Start: reanuda exactamente donde quedó
+    await sendCmd('~');
     document.getElementById('printProgress').innerText = "Reanudando impresión...";
     logConsole("[HMI] Reanudando movimiento (~).");
   }
@@ -731,14 +1237,13 @@ async function stopPrintClean() {
   currentTrace = null;
   updatePauseBtn();
 
-  // Pausa suave y limpia la cola sin disparar bloqueo permanente
   await sendCmd('!');
   await new Promise(r => setTimeout(r, 180));
-  await sendCmd('\x18'); // Reset suave de cola
+  await sendCmd('\x18');
   await new Promise(r => setTimeout(r, 350));
-  await sendCmd('$X');   // Desbloquea cualquier estado Alarm automáticamente
+  await sendCmd('$X');
   await sendCmd('G90');
-  await sendCmd('G1 Z5 F300'); // Levanta el lápiz para dejarlo libre
+  await sendCmd('G1 Z5 F300');
   await pollStatus();
 
   document.getElementById('printProgress').innerText = "Impresión detenida. Sistema listo (Idle).";
@@ -746,6 +1251,7 @@ async function stopPrintClean() {
   drawCanvas();
 }
 
+updateSketchTelemetry();
 drawCanvas();
 connectESP();
 </script>
