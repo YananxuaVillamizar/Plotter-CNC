@@ -3,19 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plotter CNC Studio HMI - Control A4 Horizontal</title>
+<title>Plotter CNC Studio HMI - A4 Horizontal</title>
 <style>
-  :root { --bg: #0f172a; --panel: #1e293b; --accent: #06b6d4; --text: #f8fafc; --muted: #94a3b8; --danger: #ef4444; --ok: #22c55e; --warn: #f59e0b; }
+  :root { --bg: #0b1120; --panel: #1e293b; --card: #0f172a; --accent: #06b6d4; --text: #f8fafc; --muted: #94a3b8; --danger: #ef4444; --ok: #22c55e; --warn: #f59e0b; }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-  body { margin: 0; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-  aside { width: 435px; background: var(--panel); padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; border-right: 1px solid #334155; }
-  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; position: relative; }
-  h2 { margin: 0 0 6px 0; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; display: flex; justify-content: space-between; align-items: center; }
-  .card { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
-  .row { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
+  body { margin: 0; background: var(--bg); color: var(--text); display: grid; grid-template-columns: 380px 1fr 330px; height: 100vh; overflow: hidden; }
+  aside { background: var(--panel); padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; border-right: 1px solid #334155; }
+  aside.right-panel { border-right: none; border-left: 1px solid #334155; }
+  main { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 14px; overflow: hidden; background: radial-gradient(circle at center, #111827 0%, #090d16 100%); }
+  h2 { margin: 0 0 6px 0; font-size: 11.5px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; display: flex; justify-content: space-between; align-items: center; }
+  .card { background: var(--card); padding: 9px; border-radius: 8px; border: 1px solid #334155; }
+  .row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
   .row:last-child { margin-bottom: 0; }
-  input[type="text"], input[type="number"], select { background: #1e293b; border: 1px solid #475569; color: white; padding: 5px 8px; border-radius: 4px; width: 100%; font-size: 12px; }
-  button { background: #334155; color: white; border: none; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.15s; font-size: 11.5px; }
+  input[type="text"], input[type="number"], select { background: #1e293b; border: 1px solid #475569; color: white; padding: 5px 7px; border-radius: 4px; width: 100%; font-size: 11.5px; }
+  button { background: #334155; color: white; border: none; padding: 6px 8px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.15s; font-size: 11px; }
   button:hover { background: #475569; }
   button.primary { background: var(--accent); color: #0f172a; }
   button.primary:hover { background: #22d3ee; }
@@ -26,278 +27,258 @@
   button.danger { background: var(--danger); }
   button.danger:hover { background: #f87171; }
   button.active-tool { background: var(--accent); color: #0f172a; }
-  .tabs { display: flex; gap: 6px; }
-  .tab { flex: 1; text-align: center; padding: 7px; background: #0f172a; border-radius: 6px; cursor: pointer; font-size: 12.5px; border: 1px solid #334155; }
-  .tab.active { background: var(--accent); color: #0f172a; font-weight: bold; border-color: var(--accent); }
   .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .grid-edit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-  label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
-  #canvasWrap { background: #020617; padding: 10px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 2px solid #06b6d4; position: relative; }
-  canvas { background: #ffffff; cursor: default; display: block; }
-  .preview-box { background: #020617; border: 1px dashed #475569; border-radius: 6px; padding: 6px; display: flex; gap: 8px; align-items: center; justify-content: center; min-height: 95px; margin-bottom: 7px; }
+  label { font-size: 10.5px; color: var(--muted); display: block; margin-bottom: 2px; }
+
+  /* CONTENEDOR CENTRAL OPTIMIZADO SIN ESPACIOS MUERTOS */
+  .top-telemetry { width: 100%; display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 6px 14px; border-radius: 8px; border: 1px solid #334155; font-size: 12px; }
+  #canvasWrap { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; padding: 6px 0; }
+  .canvas-frame { background: #020617; padding: 8px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); border: 2px solid #06b6d4; display: flex; align-items: center; justify-content: center; }
+  canvas#a4Canvas { background: #ffffff; cursor: default; display: block; max-width: 100%; max-height: calc(100vh - 112px); width: auto; height: auto; }
+  .sketch-info-bar { width: 100%; background: var(--panel); border: 1px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 11.5px; display: flex; gap: 12px; align-items: center; color: var(--muted); justify-content: space-between; flex-wrap: wrap; }
+  .sketch-info-bar b { color: var(--text); }
+
+  /* VISTA PREVIA COMPARATIVA */
+  .preview-box { background: #020617; border: 1px dashed #475569; border-radius: 6px; padding: 6px; display: flex; gap: 8px; align-items: center; justify-content: center; min-height: 92px; margin-bottom: 6px; }
   .preview-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .preview-col span { font-size: 10px; color: var(--muted); }
-  .preview-col canvas { max-width: 100%; max-height: 85px; border-radius: 4px; border: 1px solid #334155; background: #ffffff; }
-  .status-bar { position: absolute; top: 10px; right: 18px; background: var(--panel); padding: 7px 14px; border-radius: 20px; font-size: 12.5px; border: 1px solid #334155; display: flex; gap: 14px; align-items: center; }
-  .sketch-info-bar { margin-top: 10px; background: var(--panel); border: 1px solid #334155; border-radius: 8px; padding: 7px 14px; font-size: 11.5px; display: flex; gap: 14px; align-items: center; color: var(--muted); flex-wrap: wrap; justify-content: center; }
-  .sketch-info-bar b { color: var(--text); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--danger); margin-right: 6px; transition: 0.2s; flex-shrink: 0; }
+  .preview-col canvas { max-width: 100%; max-height: 82px; border-radius: 4px; border: 1px solid #334155; background: #ffffff; }
+
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--danger); margin-right: 5px; transition: 0.2s; flex-shrink: 0; }
   .dot.online { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
   .dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
-  .origin-badge { display: flex; flex-direction: column; gap: 6px; background: #1e293b; padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; font-size: 12px; margin-bottom: 8px; }
-  .axis-pills { display: flex; gap: 6px; }
-  .pill { flex: 1; text-align: center; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #0f172a; border: 1px solid #334155; }
+  .origin-badge { display: flex; flex-direction: column; gap: 5px; background: #1e293b; padding: 7px 9px; border-radius: 6px; border: 1px solid #334155; font-size: 11.5px; margin-bottom: 7px; }
+  .axis-pills { display: flex; gap: 5px; }
+  .pill { flex: 1; text-align: center; padding: 2px 5px; border-radius: 4px; font-size: 10.5px; font-weight: 600; background: #0f172a; border: 1px solid #334155; }
   .pill.zero { color: var(--ok); border-color: rgba(34, 197, 94, 0.4); }
   .pill.moved { color: var(--warn); border-color: rgba(245, 158, 11, 0.4); }
-  .jog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; align-items: center; }
-  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 11px; height: 72px; overflow-y: auto; padding: 6px; border-radius: 4px; border: 1px solid #334155; margin-bottom: 6px; }
+  .jog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; text-align: center; align-items: center; }
+  .console-box { background: #020617; color: #38bdf8; font-family: monospace; font-size: 10.5px; flex: 1; min-height: 95px; overflow-y: auto; padding: 6px; border-radius: 4px; border: 1px solid #334155; margin-bottom: 6px; }
 </style>
 </head>
 <body>
 
+<!-- ==================== COLUMNA IZQUIERDA: DISEÑO Y EDICIÓN ==================== -->
 <aside>
-  <!-- 1. CONEXIÓN -->
   <div class="card">
-    <h2>1. Estado ESP32 (FluidNC)</h2>
+    <h2>
+      <span>1. Origen: Imagen, Pegar o Texto</span>
+      <button class="danger" onclick="clearSketch()" style="padding:2px 6px; font-size:10px;">🗑️ Limpiar</button>
+    </h2>
     <div class="row">
-      <input type="text" id="ipInput" value="192.168.1.61" placeholder="IP del ESP32">
-      <button class="primary" onclick="connectESP()" style="width:auto; white-space:nowrap;">Reconectar</button>
+      <input type="file" id="imgInput" accept="image/*" style="font-size:10.5px; flex:1;">
+      <button class="primary" onclick="pasteFromClipboard()" style="width:auto; white-space:nowrap;">📋 Pegar</button>
     </div>
-    <div style="font-size:11.5px; color:var(--muted);" id="connMsg">Iniciando enlace...</div>
-  </div>
-
-  <!-- PESTAÑAS -->
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('design', this)">Diseño CAD/CAM</div>
-    <div class="tab" onclick="switchTab('calib', this)">Control y Calibración</div>
-  </div>
-
-  <!-- PANEL DISEÑO -->
-  <div id="tab-design" style="display:flex; flex-direction:column; gap:8px;">
-    <!-- 2. ORIGEN DEL DISEÑO -->
-    <div class="card">
-      <h2>
-        <span>2. Origen: Imagen, Portapapeles o Texto</span>
-        <button class="danger" onclick="clearSketch()" style="padding:3px 7px; font-size:10.5px;">🗑️ Limpiar Sketch</button>
-      </h2>
-      <div class="row">
-        <input type="file" id="imgInput" accept="image/*" style="font-size:11px; flex:1;">
-        <button class="primary" onclick="pasteFromClipboard()" style="width:auto; white-space:nowrap;" title="También puedes usar Ctrl+V en cualquier parte">📋 Pegar (Ctrl+V)</button>
-      </div>
-      <div class="row">
-        <input type="text" id="textInput" placeholder="Escribir texto vectorizado (ej: CNC 2026)">
-        <button onclick="generateTextVectors()" style="width:auto;">Crear Texto</button>
-      </div>
-      <div class="row">
-        <button onclick="loadTestSquare()" style="width:100%;">📐 Cuadro de Calibración (50×50 mm)</button>
-      </div>
+    <div class="row">
+      <input type="text" id="textInput" placeholder="Escribir texto (ej: CNC 2026)">
+      <button onclick="generateTextVectors()" style="width:auto;">Crear</button>
     </div>
-
-    <!-- 3. ESTUDIO DE EDICIÓN DE IMAGEN Y VISTA PREVIA ORIGINAL -->
-    <div class="card">
-      <h2>
-        <span>3. Estudio de Edición y Vista Previa</span>
-        <button onclick="resetImageEdits()" style="padding:2px 6px; font-size:10px;">Restaurar Original</button>
-      </h2>
-
-      <!-- VISTA PREVIA DE IMAGEN ORIGINAL VS EDITADA -->
-      <div class="preview-box" id="previewContainer">
-        <span style="font-size:11px; color:var(--muted);" id="previewEmptyMsg">Aquí verás la imagen original y su edición al cargarla</span>
-        <div class="preview-col" id="colOrig" style="display:none;">
-          <span>Imagen Original</span>
-          <canvas id="origPreviewCanvas" width="140" height="90"></canvas>
-        </div>
-        <div class="preview-col" id="colEdit" style="display:none;">
-          <span>Editada / Procesada</span>
-          <canvas id="editPreviewCanvas" width="140" height="90"></canvas>
-        </div>
-      </div>
-
-      <div class="grid-edit" style="margin-bottom:7px;">
-        <button onclick="stepRotation(-90)">↺ -90°</button>
-        <button onclick="stepRotation(90)">↻ +90°</button>
-        <button onclick="transformImage('flipH')">⇄ Espejo X</button>
-        <button onclick="transformImage('crop')">✂ Auto-Recortar</button>
-        <button id="btnRemoveBg" onclick="toggleFilter('removeBg')">🪄 Quitar Fondo</button>
-        <button id="btnInvert" onclick="toggleFilter('invert')">◐ Invertir Color</button>
-      </div>
-
-      <label>Rotación Libre: <b id="rotBadge" style="color:white;">0°</b></label>
-      <div class="row" style="margin-bottom:7px;">
-        <input type="range" id="rotSlider" min="0" max="360" value="0" oninput="setRotation(this.value)" style="flex:1;">
-        <input type="number" id="rotNum" min="0" max="360" value="0" oninput="setRotation(this.value)" style="width:62px;">
-        <button onclick="setRotation(0)" style="width:auto; padding:5px 7px;" title="Restablecer ángulo a 0°">0°</button>
-      </div>
-
-      <div class="row">
-        <div style="flex:1.3;">
-          <label>Método de Trazado (CAM):</label>
-          <select id="vecMode" onchange="processCurrentSource()">
-            <option value="contour" selected>✒️ Solo Contornos (Bordes)</option>
-            <option value="zigzag">⚡ Relleno Rápido (Zig-Zag)</option>
-            <option value="both">🎨 Híbrido (Contorno + Relleno)</option>
-          </select>
-        </div>
-        <div style="flex:0.9;">
-          <label>Densidad / Paso:</label>
-          <select id="scanStep" onchange="processCurrentSource()">
-            <option value="2">Fino (Alta)</option>
-            <option value="3" selected>Normal</option>
-            <option value="5">Rápido (Baja)</option>
-          </select>
-        </div>
-      </div>
-
-      <label>Sensibilidad / Umbral de detección: <b id="threshVal" style="color:white;">128</b></label>
-      <input type="range" id="threshSlider" min="20" max="240" value="128" oninput="onThreshChange(this.value)" style="width:100%;">
-    </div>
-
-    <!-- 4. POSICIÓN Y ESCALA -->
-    <div class="card">
-      <h2>4. Posición y Tamaño en Hoja A4 Horizontal</h2>
-      <div class="grid-4">
-        <div><label>Posición X (0-297 mm)</label><input type="number" id="posX" value="40" step="1" oninput="syncFromInputs()"></div>
-        <div><label>Posición Y (0-210 mm)</label><input type="number" id="posY" value="30" step="1" oninput="syncFromInputs()"></div>
-        <div><label>Ancho X (mm)</label><input type="number" id="sizeW" value="100" step="1" oninput="syncFromInputs()"></div>
-        <div><label>Alto Y (mm)</label><input type="number" id="sizeH" value="100" step="1" oninput="syncFromInputs()"></div>
-      </div>
-    </div>
-
-    <!-- 5. VELOCIDAD Y EJECUCIÓN -->
-    <div class="card">
-      <h2>5. Velocidad: <b id="speedBadge" style="color:white;">350</b> mm/min</h2>
-      <div class="row">
-        <input type="range" id="speedSlider" min="50" max="500" value="350" oninput="setSpeed(this.value)">
-        <input type="number" id="speedNum" value="350" min="50" max="500" style="width:70px;" oninput="setSpeed(this.value)">
-      </div>
-      <div class="row" style="margin-top:6px;">
-        <button class="ok" id="btnStart" style="flex:2; font-size:13px;" onclick="startPrint()">▶ IMPRIMIR</button>
-        <button class="warn" id="btnPause" style="flex:1.4; font-size:12px;" onclick="togglePause()">⏸ PAUSAR</button>
-        <button class="danger" style="flex:1.2; font-size:12px;" onclick="stopPrintClean()">⏹ PARAR</button>
-      </div>
-      <div style="font-size:11.5px; color:var(--muted); margin-top:6px;" id="printProgress">Listo. Pega (Ctrl+V), sube una imagen o escribe texto.</div>
+    <div class="row">
+      <button onclick="loadTestSquare()" style="width:100%;">📐 Cuadro de Calibración (50×50 mm)</button>
     </div>
   </div>
 
-  <!-- PANEL CALIBRACIÓN -->
-  <div id="tab-calib" style="display:none; flex-direction:column; gap:10px;">
-    <div class="card">
-      <h2>Control Manual y Origen 3D (Jogging)</h2>
-
-      <div class="origin-badge">
-        <div style="display:flex; align-items:center;">
-          <span class="dot online" id="originLed"></span>
-          <span id="originText">Origen 3D: <b style="color:var(--ok);">En el Origen (0, 0, 0)</b></span>
-        </div>
-        <div class="axis-pills">
-          <div class="pill zero" id="pillX">X: 0.0</div>
-          <div class="pill zero" id="pillY">Y: 0.0</div>
-          <div class="pill zero" id="pillZ">Z: 0.0</div>
-        </div>
-      </div>
-
-      <div class="row">
-        <label style="margin:0; width:80px;">Paso (mm):</label>
-        <select id="jogStep" style="width:90px;">
-          <option value="1">1 mm</option>
-          <option value="5">5 mm</option>
-          <option value="10" selected>10 mm</option>
-          <option value="25">25 mm</option>
-        </select>
-        <button onclick="sendCmd('$X')" style="margin-left:auto; width:auto;">Desbloquear ($X)</button>
-      </div>
-
-      <div class="jog-grid">
-        <div></div>
-        <button onclick="jog('Y', 1)">Y +</button>
-        <button onclick="jog('Z', 1)">Z + (Subir)</button>
-
-        <button onclick="jog('X', -1)">X -</button>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <button class="primary" onclick="setOrigin()" style="padding:5px;" title="Fija la posición actual (X,Y,Z) como (0,0,0)">Fijar 0,0,0</button>
-          <button onclick="goHome()" style="padding:5px;" title="Regresa de forma inteligente al origen (0,0,0) solo si algún eje se movió">Ir a 0,0,0</button>
-        </div>
-        <button onclick="jog('X', 1)">X +</button>
-
-        <div></div>
-        <button onclick="jog('Y', -1)">Y -</button>
-        <button onclick="jog('Z', -1)">Z - (Bajar)</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Calibración Pasos / mm</h2>
-      <label>1. Ordenar avance de prueba de 10 mm:</label>
-      <div class="row">
-        <button onclick="jog('X', 1, 10)">Mover X 10mm</button>
-        <button onclick="jog('Y', 1, 10)">Mover Y 10mm</button>
-      </div>
-      <label>2. Ingresa cuánto midió realmente con regla (mm):</label>
-      <div class="row">
-        <select id="calAxis" style="width:85px;">
-          <option value="x">Eje X</option>
-          <option value="y">Eje Y</option>
-          <option value="z">Eje Z</option>
-        </select>
-        <input type="number" id="measuredMm" value="10" step="0.1">
-        <button class="primary" onclick="applyCalibration()" style="width:auto;">Calcular</button>
-      </div>
-      <div class="row" style="margin-top:6px;">
-        <button class="ok" style="width:100%;" onclick="saveConfigFlash()">💾 Guardar Calibración Permanente</button>
-      </div>
-      <div style="font-size:11px; color:var(--muted); margin-top:4px;" id="calInfo">Pasos actuales: 100.000 pasos/mm</div>
-    </div>
-  </div>
-
-  <!-- CONSOLA DIRECTA -->
   <div class="card">
-    <h2>Consola FluidNC</h2>
-    <div class="console-box" id="consoleLog"></div>
+    <h2>
+      <span>2. Estudio de Edición y Vista Previa</span>
+      <button onclick="resetImageEdits()" style="padding:2px 6px; font-size:10px;">Restaurar</button>
+    </h2>
+
+    <div class="preview-box">
+      <span style="font-size:10.5px; color:var(--muted); text-align:center;" id="previewEmptyMsg">Carga o pega (Ctrl+V) una imagen para ver el antes y después</span>
+      <div class="preview-col" id="colOrig" style="display:none;">
+        <span>Imagen Original</span>
+        <canvas id="origPreviewCanvas" width="145" height="82"></canvas>
+      </div>
+      <div class="preview-col" id="colEdit" style="display:none;">
+        <span>Procesada (Umbral / Trazos)</span>
+        <canvas id="editPreviewCanvas" width="145" height="82"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-edit" style="margin-bottom:6px;">
+      <button onclick="stepRotation(-90)">↺ -90°</button>
+      <button onclick="stepRotation(90)">↻ +90°</button>
+      <button onclick="transformImage('flipH')">⇄ Espejo X</button>
+      <button onclick="transformImage('crop')">✂ Recortar</button>
+      <button id="btnRemoveBg" onclick="toggleFilter('removeBg')">🪄 Sin Fondo</button>
+      <button id="btnInvert" onclick="toggleFilter('invert')">◐ Invertir</button>
+    </div>
+
+    <label>Rotación Libre: <b id="rotBadge" style="color:white;">0°</b></label>
+    <div class="row" style="margin-bottom:6px;">
+      <input type="range" id="rotSlider" min="0" max="360" value="0" oninput="setRotation(this.value)" style="flex:1;">
+      <input type="number" id="rotNum" min="0" max="360" value="0" oninput="setRotation(this.value)" style="width:58px;">
+      <button onclick="setRotation(0)" style="width:auto; padding:4px 6px;">0°</button>
+    </div>
+
     <div class="row">
-      <input type="text" id="manualCmd" placeholder="Comando (ej: $X, G0 X10)..." onkeydown="if(event.key==='Enter') sendManual()">
-      <button onclick="sendManual()" style="width:auto;">Enviar</button>
+      <div style="flex:1.35;">
+        <label>Método de Trazado (CAM):</label>
+        <select id="vecMode" onchange="processCurrentSource()">
+          <option value="contour" selected>✒️ Solo Contornos (Bordes)</option>
+          <option value="zigzag">⚡ Relleno Rápido (Zig-Zag)</option>
+          <option value="both">🎨 Híbrido (Contorno + Relleno)</option>
+        </select>
+      </div>
+      <div style="flex:0.85;">
+        <label>Densidad:</label>
+        <select id="scanStep" onchange="processCurrentSource()">
+          <option value="2">Fino</option>
+          <option value="3" selected>Normal</option>
+          <option value="5">Rápido</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Sensibilidad / Umbral: <b id="threshVal" style="color:white;">128</b></label>
+    <input type="range" id="threshSlider" min="20" max="240" value="128" oninput="onThreshChange(this.value)" style="width:100%;">
+  </div>
+
+  <div class="card">
+    <h2>3. Posición y Tamaño (A4 Horizontal)</h2>
+    <div class="grid-4">
+      <div><label>Posición X (0-297 mm)</label><input type="number" id="posX" value="40" step="1" oninput="syncFromInputs()"></div>
+      <div><label>Posición Y (0-210 mm)</label><input type="number" id="posY" value="30" step="1" oninput="syncFromInputs()"></div>
+      <div><label>Ancho X (mm)</label><input type="number" id="sizeW" value="100" step="1" oninput="syncFromInputs()"></div>
+      <div><label>Alto Y (mm)</label><input type="number" id="sizeH" value="100" step="1" oninput="syncFromInputs()"></div>
     </div>
   </div>
 </aside>
 
+<!-- ==================== COLUMNA CENTRAL: HOJA A4 MAXIMIZADA ==================== -->
 <main>
-  <div class="status-bar">
-    <span><span class="dot" id="statusDot"></span><b id="machineState">Conectando...</b></span>
-    <span>X: <b id="liveX">0.0</b> mm</span>
-    <span>Y: <b id="liveY">0.0</b> mm</span>
-    <span>Z: <b id="liveZ">0.0</b> mm</span>
+  <div class="top-telemetry">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="dot" id="statusDot"></span>
+      <b id="machineState">Conectando...</b>
+      <span style="color:var(--muted); font-size:11px;" id="connMsg">(192.168.1.61)</span>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span>X: <b id="liveX" style="color:var(--accent);">0.0</b> mm</span>
+      <span>Y: <b id="liveY" style="color:var(--accent);">0.0</b> mm</span>
+      <span>Z: <b id="liveZ" style="color:var(--accent);">0.0</b> mm</span>
+    </div>
   </div>
 
-  <!-- HOJA A4 HORIZONTAL: 297 mm (Ancho X) x 210 mm (Alto Y) -->
   <div id="canvasWrap">
-    <canvas id="a4Canvas" width="653" height="462"></canvas>
+    <div class="canvas-frame">
+      <!-- Resolución interna alta (297 * 3 = 891 px, 210 * 3 = 630 px) auto-escalada al alto disponible -->
+      <canvas id="a4Canvas" width="891" height="630"></canvas>
+    </div>
   </div>
 
-  <!-- SUBMENÚ DE DIMENSIONES Y TELEMETRÍA DE LA IMAGEN -->
   <div class="sketch-info-bar">
     <span>Hoja: <b>A4 Horizontal (297×210 mm)</b></span>
     <span>Origen: <b id="infoOrigin">X: 40, Y: 30 mm</b></span>
-    <span>Dimensiones: <b id="infoDims">100 × 100 mm</b></span>
+    <span>Tamaño: <b id="infoDims">100 × 100 mm</b></span>
     <span>Rotación: <b id="infoRot">0°</b></span>
     <span>Trazos: <b id="infoPaths">0</b></span>
     <button onclick="clearSketch()" style="padding:3px 8px; font-size:11px;">🧹 Limpiar</button>
   </div>
 </main>
 
+<!-- ==================== COLUMNA DERECHA: EJECUCIÓN, JOGGING Y CONSOLA ==================== -->
+<aside class="right-panel">
+  <div class="card">
+    <h2>4. Ejecución y Velocidad (<b id="speedBadge" style="color:white;">350</b> mm/min)</h2>
+    <div class="row">
+      <input type="range" id="speedSlider" min="50" max="500" value="350" oninput="setSpeed(this.value)">
+      <input type="number" id="speedNum" value="350" min="50" max="500" style="width:65px;" oninput="setSpeed(this.value)">
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <button class="ok" id="btnStart" style="flex:2; font-size:12.5px;" onclick="startPrint()">▶ IMPRIMIR</button>
+      <button class="warn" id="btnPause" style="flex:1.4;" onclick="togglePause()">⏸ PAUSAR</button>
+      <button class="danger" style="flex:1.1;" onclick="stopPrintClean()">⏹ PARAR</button>
+    </div>
+    <div style="font-size:11px; color:var(--muted); margin-top:5px;" id="printProgress">Listo para trazar.</div>
+  </div>
+
+  <div class="card">
+    <h2>5. Control Manual y Origen 3D</h2>
+    <div class="origin-badge">
+      <div style="display:flex; align-items:center;">
+        <span class="dot online" id="originLed"></span>
+        <span id="originText">Origen 3D: <b style="color:var(--ok);">En el Origen (0, 0, 0)</b></span>
+      </div>
+      <div class="axis-pills">
+        <div class="pill zero" id="pillX">X: 0.0</div>
+        <div class="pill zero" id="pillY">Y: 0.0</div>
+        <div class="pill zero" id="pillZ">Z: 0.0</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <label style="margin:0; width:65px;">Paso:</label>
+      <select id="jogStep" style="width:80px;">
+        <option value="1">1 mm</option>
+        <option value="5">5 mm</option>
+        <option value="10" selected>10 mm</option>
+        <option value="25">25 mm</option>
+      </select>
+      <button onclick="sendCmd('$X')" style="margin-left:auto; width:auto;">Desbloquear ($X)</button>
+    </div>
+
+    <div class="jog-grid">
+      <div></div>
+      <button onclick="jog('Y', 1)">Y +</button>
+      <button onclick="jog('Z', 1)">Z + (Subir)</button>
+
+      <button onclick="jog('X', -1)">X -</button>
+      <div style="display:flex; flex-direction:column; gap:3px;">
+        <button class="primary" onclick="setOrigin()" style="padding:4px;">Fijar 0,0,0</button>
+        <button onclick="goHome()" style="padding:4px;">Ir a 0,0,0</button>
+      </div>
+      <button onclick="jog('X', 1)">X +</button>
+
+      <div></div>
+      <button onclick="jog('Y', -1)">Y -</button>
+      <button onclick="jog('Z', -1)">Z - (Bajar)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>6. Calibración Pasos / mm</h2>
+    <div class="row">
+      <select id="calAxis" style="width:72px;">
+        <option value="x">Eje X</option>
+        <option value="y">Eje Y</option>
+        <option value="z">Eje Z</option>
+      </select>
+      <input type="number" id="measuredMm" value="10" step="0.1" placeholder="Medida real">
+      <button class="primary" onclick="applyCalibration()" style="width:auto;">Ajustar</button>
+      <button class="ok" onclick="saveConfigFlash()" style="width:auto;" title="Guardar en config.yaml">💾</button>
+    </div>
+    <div style="font-size:10.5px; color:var(--muted);" id="calInfo">Avanza 10 mm e ingresa medida real.</div>
+  </div>
+
+  <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:145px;">
+    <h2>
+      <span>Consola FluidNC</span>
+      <button onclick="connectESP()" style="padding:2px 6px; font-size:10px;">Reconectar</button>
+    </h2>
+    <div class="console-box" id="consoleLog"></div>
+    <div class="row">
+      <input type="text" id="manualCmd" placeholder="Comando G-Code ($X, $MD)..." onkeydown="if(event.key==='Enter') sendManual()">
+      <button onclick="sendManual()" style="width:auto;">Enviar</button>
+    </div>
+  </div>
+</aside>
+
 <script>
 const SHEET_W = 297;
 const SHEET_H = 210;
-const SCALE = 2.2;
+const SCALE = 3; // 297 * 3 = 891 px, 210 * 3 = 630 px
 
 const canvas = document.getElementById('a4Canvas');
 const ctx = canvas.getContext('2d');
-
-if (window.location.hostname) document.getElementById('ipInput').value = window.location.hostname;
+const ESP_IP = window.location.hostname || "192.168.1.61";
 
 let statusTimer = null;
 let currentState = "Offline";
-let pristineCanvas = null; // Copia intacta de la imagen original cargada
-let sourceCanvas = null;   // Copia tras recorte o espejo
+let pristineCanvas = null;
+let sourceCanvas = null;
 let rotationDeg = 0;
 let baseBoxRatio = 1;
 let imgFilters = { removeBg: false, invert: false };
@@ -319,13 +300,6 @@ function logConsole(txt) {
   const boxEl = document.getElementById('consoleLog');
   boxEl.innerHTML += String(txt).replace(/</g, "&lt;") + "<br>";
   boxEl.scrollTop = boxEl.scrollHeight;
-}
-
-function switchTab(tab, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-design').style.display = tab === 'design' ? 'flex' : 'none';
-  document.getElementById('tab-calib').style.display = tab === 'calib' ? 'flex' : 'none';
 }
 
 function updateOriginLed() {
@@ -454,24 +428,23 @@ function sendManual() {
 
 async function connectESP() {
   if (statusTimer) clearInterval(statusTimer);
-  const ip = document.getElementById('ipInput').value.trim();
-  document.getElementById('connMsg').innerText = "Enlazando con ESP32...";
+  document.getElementById('connMsg').innerText = `(${ESP_IP}...)`;
   const res = await sendCmd('$X');
   if (res !== "error") {
     await sendCmd('$HTTP/BlockDuringMotion=OFF');
     await pollStatus();
-    document.getElementById('connMsg').innerText = `Conectado en línea (${ip})`;
+    document.getElementById('connMsg').innerText = `(${ESP_IP} en línea)`;
     document.getElementById('statusDot').classList.add('online');
     logConsole("[HMI] ¡Enlazado y sincronizado!");
     statusTimer = setInterval(() => { if (!isPrinting && !isBusyMotion) pollStatus(); }, 400);
   } else {
-    document.getElementById('connMsg').innerText = "Sin respuesta del ESP32";
+    document.getElementById('connMsg').innerText = "(Sin enlace)";
     document.getElementById('machineState').innerText = "Offline";
   }
 }
 
 // =========================================================================
-// CARGA DE IMÁGENES, VISTA PREVIA ORIGINAL Y EDICIÓN
+// CARGA DE IMÁGENES, VISTA PREVIA PROCESADA EN B/N Y EDICIÓN
 // =========================================================================
 
 function cloneCanvas(src) {
@@ -499,23 +472,51 @@ function renderOriginalPreview() {
   colEdit.style.display = 'flex';
 
   const oc = document.getElementById('origPreviewCanvas');
-  oc.width = 160;
-  oc.height = Math.max(40, Math.min(100, Math.round(160 * (pristineCanvas.height / pristineCanvas.width))));
+  oc.width = 150;
+  oc.height = Math.max(40, Math.min(82, Math.round(150 * (pristineCanvas.height / pristineCanvas.width))));
   const octx = oc.getContext('2d');
   octx.fillStyle = "#ffffff";
   octx.fillRect(0, 0, oc.width, oc.height);
   octx.drawImage(pristineCanvas, 0, 0, oc.width, oc.height);
 }
 
-function renderEditedPreview(processedCanvas) {
-  if (!processedCanvas) return;
+// Dibuja en el cuadro "Procesada" la imagen binarizada real + los vectores resultantes
+function renderProcessedPreview(W, H, bin, generatedPaths) {
   const ec = document.getElementById('editPreviewCanvas');
-  ec.width = 160;
-  ec.height = Math.max(40, Math.min(100, Math.round(160 * (processedCanvas.height / processedCanvas.width))));
+  ec.width = 150;
+  ec.height = Math.max(40, Math.min(82, Math.round(150 * (H / W))));
   const ectx = ec.getContext('2d');
+
+  // Renderizar matriz binaria (umbral + filtros aplicados)
+  const tmp = document.createElement('canvas');
+  tmp.width = W; tmp.height = H;
+  const tctx = tmp.getContext('2d');
+  const imgD = tctx.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) {
+    const val = bin[i] === 1 ? 210 : 255; // Gris suave de fondo para resaltar trazos
+    imgD.data[i*4] = val;
+    imgD.data[i*4+1] = val;
+    imgD.data[i*4+2] = val;
+    imgD.data[i*4+3] = 255;
+  }
+  tctx.putImageData(imgD, 0, 0);
+
   ectx.fillStyle = "#ffffff";
   ectx.fillRect(0, 0, ec.width, ec.height);
-  ectx.drawImage(processedCanvas, 0, 0, ec.width, ec.height);
+  ectx.drawImage(tmp, 0, 0, ec.width, ec.height);
+
+  // Superponer los vectores exactos que dibujará el plotter
+  ectx.strokeStyle = "#0284c7";
+  ectx.lineWidth = 1.1;
+  generatedPaths.forEach(p => {
+    ectx.beginPath();
+    p.forEach((pt, idx) => {
+      const px = pt.x * ec.width;
+      const py = pt.y * ec.height;
+      if (idx === 0) ectx.moveTo(px, py); else ectx.lineTo(px, py);
+    });
+    ectx.stroke();
+  });
 }
 
 function loadImageElementToEditor(img) {
@@ -627,7 +628,7 @@ function clearSketch() {
   renderOriginalPreview();
   document.getElementById('imgInput').value = "";
   document.getElementById('textInput').value = "";
-  document.getElementById('printProgress').innerText = "Lienzo limpio. Listo para un nuevo diseño.";
+  document.getElementById('printProgress').innerText = "Lienzo limpio.";
   updateSketchTelemetry();
   drawCanvas();
   logConsole("[HMI] Sketch limpiado.");
@@ -665,9 +666,7 @@ function setRotation(val) {
   }
 }
 
-function stepRotation(delta) {
-  setRotation(rotationDeg + delta);
-}
+function stepRotation(delta) { setRotation(rotationDeg + delta); }
 
 function toggleFilter(filterName) {
   if (!sourceCanvas) return;
@@ -684,10 +683,8 @@ function transformImage(action) {
   const dctx = dst.getContext('2d');
 
   if (action === 'flipH') {
-    dst.width = srcW;
-    dst.height = srcH;
-    dctx.translate(srcW, 0);
-    dctx.scale(-1, 1);
+    dst.width = srcW; dst.height = srcH;
+    dctx.translate(srcW, 0); dctx.scale(-1, 1);
     dctx.drawImage(sourceCanvas, 0, 0);
   } else if (action === 'crop') {
     const sctx = sourceCanvas.getContext('2d');
@@ -799,9 +796,6 @@ function processCurrentSource() {
   rctx.rotate(rad);
   rctx.drawImage(sourceCanvas, -sourceCanvas.width / 2, -sourceCanvas.height / 2);
 
-  // Actualizar mini vista previa de la versión editada
-  renderEditedPreview(rotCanvas);
-
   const off = document.createElement('canvas');
   const res = step === 2 ? 180 : (step === 3 ? 140 : 100);
   off.width = res;
@@ -902,8 +896,9 @@ function processCurrentSource() {
 
   paths = newPaths;
   tracedPaths = [];
+  renderProcessedPreview(W, H, bin, paths);
   updateSketchTelemetry();
-  document.getElementById('printProgress').innerText = `Vectorizado (${mode}, ${rotationDeg}°): ${paths.length} trazos listos.`;
+  document.getElementById('printProgress').innerText = `Listo (${mode}, ${rotationDeg}°): ${paths.length} trazos.`;
   drawCanvas();
 }
 
@@ -962,17 +957,17 @@ function drawCanvas() {
   for (let x = 0; x <= SHEET_W; x += 10) { ctx.beginPath(); ctx.moveTo(x * SCALE, 0); ctx.lineTo(x * SCALE, canvas.height); ctx.stroke(); }
   for (let y = 0; y <= SHEET_H; y += 10) { ctx.beginPath(); ctx.moveTo(0, y * SCALE); ctx.lineTo(canvas.width, y * SCALE); ctx.stroke(); }
 
-  ctx.strokeStyle = "#06b6d4"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = "#06b6d4"; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
   ctx.strokeRect(box.x * SCALE, box.y * SCALE, box.w * SCALE, box.h * SCALE);
   ctx.setLineDash([]);
   ctx.fillStyle = "#06b6d4";
-  ctx.fillRect((box.x + box.w) * SCALE - 6, (box.y + box.h) * SCALE - 6, 12, 12);
+  ctx.fillRect((box.x + box.w) * SCALE - 8, (box.y + box.h) * SCALE - 8, 16, 16);
 
   ctx.fillStyle = "#0f172a";
-  ctx.font = "bold 10px sans-serif";
-  ctx.fillText(`${box.w}×${box.h} mm (${rotationDeg}°)`, box.x * SCALE + 4, Math.max(12, box.y * SCALE - 4));
+  ctx.font = "bold 13px sans-serif";
+  ctx.fillText(`${box.w}×${box.h} mm (${rotationDeg}°)`, box.x * SCALE + 6, Math.max(16, box.y * SCALE - 6));
 
-  ctx.strokeStyle = "#64748b"; ctx.lineWidth = 1.3;
+  ctx.strokeStyle = "#64748b"; ctx.lineWidth = 1.6;
   paths.forEach(p => {
     ctx.beginPath();
     p.forEach((pt, i) => {
@@ -983,7 +978,7 @@ function drawCanvas() {
     ctx.stroke();
   });
 
-  ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
   tracedPaths.forEach(seg => {
     if (seg.length < 2) return;
     ctx.beginPath();
@@ -999,30 +994,34 @@ function drawCanvas() {
   if (isPrinting) {
     ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
     ctx.beginPath();
-    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 16, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.fillStyle = livePos.z <= 0.2 ? "#ef4444" : "#06b6d4";
   ctx.beginPath();
-  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2; ctx.stroke();
+}
+
+// Coordenadas del ratón ajustadas automáticamente al escalado responsivo del canvas
+function getCanvasMmCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = ((e.clientX - rect.left) / rect.width) * SHEET_W;
+  const my = ((e.clientY - rect.top) / rect.height) * SHEET_H;
+  return { mx, my };
 }
 
 canvas.addEventListener('mousedown', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) / SCALE;
-  const my = (e.clientY - rect.top) / SCALE;
-  if (Math.abs(mx - (box.x + box.w)) <= 6 && Math.abs(my - (box.y + box.h)) <= 6) { dragMode = 'resize'; return; }
+  const { mx, my } = getCanvasMmCoords(e);
+  if (Math.abs(mx - (box.x + box.w)) <= 8 && Math.abs(my - (box.y + box.h)) <= 8) { dragMode = 'resize'; return; }
   if (mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
     dragMode = 'move'; dragOffset = { x: mx - box.x, y: my - box.y };
   }
 });
 window.addEventListener('mousemove', (e) => {
   if (!dragMode) return;
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) / SCALE;
-  const my = (e.clientY - rect.top) / SCALE;
+  const { mx, my } = getCanvasMmCoords(e);
   if (dragMode === 'move') {
     box.x = Math.max(0, Math.min(SHEET_W - box.w, Math.round(mx - dragOffset.x)));
     box.y = Math.max(0, Math.min(SHEET_H - box.h, Math.round(my - dragOffset.y)));
@@ -1080,7 +1079,6 @@ async function setOrigin() {
   logConsole("[HMI] Posición actual fijada como Origen 3D (0,0,0)");
 }
 
-// RETORNO INTELIGENTE AL ORIGEN: No mueve nada si ya está en (0,0,0)
 async function goHome() {
   if (isPrinting || isBusyMotion) return;
 
@@ -1088,7 +1086,7 @@ async function goHome() {
   const zAtZero = Math.abs(livePos.z) <= 0.15;
 
   if (xyAtZero && zAtZero) {
-    logConsole("[HMI] El cabezal ya está en el origen (0, 0, 0). Sin movimientos innecesarios.");
+    logConsole("[HMI] El cabezal ya está en el origen (0, 0, 0).");
     return;
   }
 
@@ -1096,21 +1094,19 @@ async function goHome() {
   const feed = +document.getElementById('speedNum').value;
   await sendCmd("G90");
 
-  // Si X o Y están lejos del origen, subir Z primero a 5 mm para viajar sin chocar
   if (!xyAtZero) {
     if (livePos.z < 4.9) {
-      logConsole("[HMI] Retorno seguro: 1) Subiendo Eje Z a altura libre (5 mm)...");
+      logConsole("[HMI] Retorno seguro: 1) Subiendo Eje Z a 5 mm...");
       await sendCmd(`G1 Z5 F${feed}`);
       await waitUntilIdle();
     }
     if (isBusyMotion) {
-      logConsole("[HMI] Retorno seguro: 2) Desplazando X e Y al origen (0, 0)...");
+      logConsole("[HMI] Retorno seguro: 2) Moviendo X e Y a (0, 0)...");
       await sendCmd(`G1 X0 Y0 F${feed}`);
       await waitUntilIdle();
     }
   }
 
-  // Bajar o ajustar Z a 0.0 solo si Z no está en 0.0
   if (isBusyMotion && Math.abs(livePos.z) > 0.15) {
     logConsole("[HMI] Retorno seguro: Posicionando Eje Z en 0.0...");
     await sendCmd(`G1 Z0 F${feed}`);
@@ -1128,7 +1124,7 @@ function applyCalibration() {
   const newSteps = (currentStepsPerMm[ax] * 10) / realMm;
   currentStepsPerMm[ax] = newSteps;
   sendCmd(`$/axes/${ax}/steps_per_mm=${newSteps.toFixed(3)}`);
-  document.getElementById('calInfo').innerText = `Nuevo ${ax.toUpperCase()}: ${newSteps.toFixed(3)} pasos/mm aplicado.`;
+  document.getElementById('calInfo').innerText = `Nuevo ${ax.toUpperCase()}: ${newSteps.toFixed(3)} pasos/mm.`;
 }
 
 function saveConfigFlash() {
@@ -1218,15 +1214,15 @@ async function togglePause() {
     isPaused = true;
     updatePauseBtn();
     await sendCmd('!');
-    document.getElementById('printProgress').innerText = "Impresión en pausa. Pulsa ▶ SEGUIR para continuar.";
-    logConsole("[HMI] Movimiento pausado (!).");
+    document.getElementById('printProgress').innerText = "En pausa. Pulsa ▶ SEGUIR.";
+    logConsole("[HMI] Pausado (!).");
     await pollStatus();
   } else {
     isPaused = false;
     updatePauseBtn();
     await sendCmd('~');
-    document.getElementById('printProgress').innerText = "Reanudando impresión...";
-    logConsole("[HMI] Reanudando movimiento (~).");
+    document.getElementById('printProgress').innerText = "Reanudando...";
+    logConsole("[HMI] Reanudando (~).");
   }
 }
 
@@ -1246,8 +1242,8 @@ async function stopPrintClean() {
   await sendCmd('G1 Z5 F300');
   await pollStatus();
 
-  document.getElementById('printProgress').innerText = "Impresión detenida. Sistema listo (Idle).";
-  logConsole("[HMI] Impresión detenida y sistema desbloqueado.");
+  document.getElementById('printProgress').innerText = "Detenido. Sistema listo (Idle).";
+  logConsole("[HMI] Detenido y desbloqueado.");
   drawCanvas();
 }
 
